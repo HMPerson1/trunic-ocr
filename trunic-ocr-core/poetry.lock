@@ -62,14 +62,20 @@ files = [
 ]
 
 [package.dependencies]
-numpy = [
-    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
-    {version = ">=1.23.5", markers = "python_version >= \"3.11\" and python_version < \"3.12\""},
-    {version = ">=1.21.4", markers = "python_version >= \"3.10\" and platform_system == \"Darwin\" and python_version < \"3.11\""},
-    {version = ">=1.21.2", markers = "platform_system != \"Darwin\" and python_version >= \"3.10\" and python_version < \"3.11\""},
+numpy = {version = ">=1.26.0", markers = "python_version >= \"3.12\""}
+
+[[package]]
+name = "pyodide-py"
+version = "0.26.1"
+description = "A Python package providing core interpreter functionality for Pyodide"
+optional = false
+python-versions = ">=3.12"
+files = [
+    {file = "pyodide_py-0.26.1-py3-none-any.whl", hash = "sha256:7b7a1be1c1faa5bfc642cf4bf6a8497793e5aa874f7fa8b53d1840c92dc2a13e"},
+    {file = "pyodide_py-0.26.1.tar.gz", hash = "sha256:02f2e20f8babe016920e43d63dbae6e253954362d02de9059eb48fe669f017a6"},
 ]
 
 [metadata]
 lock-version = "2.0"
-python-versions = "^3.10"
-content-hash = "5960c48cb13e1b8c6e50d4fb2f6d93871209d88df27deb942843619e2a2f2d7e"
+python-versions = "^3.12"
+content-hash = "b47db7e9871b3809b69d4c92bf5f2ad6e3e8f9c1e0cbf8b003c93e02b9df0543"

@@ -29,6 +29,10 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "*.whl",
+                "input": "trunic-ocr-core/dist"
               }
             ],
             "styles": [
@@ -98,5 +102,8 @@
         }
       }
     }
+  },
+  "cli": {
+    "analytics": "da22db00-871a-4a53-830c-8507c34a6b61"
   }
 }
