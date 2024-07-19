@@ -1,0 +1,47 @@
+.img-drop-container {
+  position: absolute;
+  inset: 80px;
+  contain: strict;
+}
+
+.img-drop-zone {
+  position: absolute;
+  inset: 0;
+  border: 10px dashed transparent;
+}
+
+.img-drop-zone.img-drop-active {
+  border-color: blue;
+}
+
+.img-drop-help {
+  width: 100%;
+  height: 100%;
+
+  border: 10px dashed gray;
+  font-size: larger;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.help-or {
+  font-size: medium;
+  font-style: italic;
+  margin: 0;
+}
+
+.help-or::before {
+  content: "- ";
+}
+.help-or::after {
+  content: " -";
+}
+
+.img-display {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

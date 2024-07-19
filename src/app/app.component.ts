@@ -1,33 +1,115 @@
-import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
-import { loadPyodide } from 'pyodide';
-import type { PyBuffer } from 'pyodide/ffi';
+import { Component, signal } from '@angular/core';
+import { ImageRendererCanvasComponent } from './image-renderer-canvas/image-renderer-canvas.component';
+import { PyworkService } from './pywork.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet],
+  imports: [ImageRendererCanvasComponent],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  styleUrl: './app.component.scss',
+  host: {
+    '(window:dragover)': 'windowDragOver($event)',
+    '(window:drop)': 'windowDrop($event)',
+    '(window:paste)': 'onPaste($event)',
+  },
 })
 export class AppComponent {
-  title = 'trunic-ocr';
-  constructor() {
-    const pyodide = loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/", packages: ["numpy", "opencv-python"] });
-    const pypkgPromise = fetch("trunic_ocr_core-0.1.0-py3-none-any.whl");
-    (async () => {
-      const py = await pyodide;
-      performance.mark("pyodide loaded");
+  readonly hasInputImage = signal(false);
+  readonly imageRenderable = signal<ImageBitmap | undefined>(undefined);
+  readonly dragActive = signal(false);
 
-      py.unpackArchive(await (await pypkgPromise).arrayBuffer(), 'wheel');
-      const pypkg = py.pyimport('trunic_ocr_core');
-      performance.mark("python pkg loaded");
-      const test_img = new Uint8Array(100)
-      test_img[44] = 1
-      const pyout = pypkg.test(py.toPy(test_img), 10, 10) as PyBuffer
-      const data = pyout.getBuffer().data.slice();
-      console.log(data);
-      performance.mark("done");
-    })();
+  constructor(private readonly pywork: PyworkService) {
   }
+
+  async handleData(data: DataTransfer) {
+    const blob = await getImageDataBlobFromDataTransfer(data);
+    if (blob === undefined) {
+      throw new Error('no image data from drop or paste event');
+    }
+    this.hasInputImage.set(true);
+    this.imageRenderable.set(undefined);
+
+    // race python-opencv decode and browser decode
+    const pyDecodeResultP = this.pywork.decodeImage(blob);
+    const bitmap = await (async () => {
+      try {
+        return await createImageBitmap(blob);
+      } catch (e) {
+        console.warn("browser could not decode image", e);
+      }
+      const pyDecodeResult = await pyDecodeResultP;
+      if (pyDecodeResult !== undefined) {
+        return await this.pywork.decoded2bitmap(pyDecodeResult);
+      }
+      throw new Error("could not decode image");
+    })();
+    this.imageRenderable.set(bitmap);
+    const pyDecodeResult = await pyDecodeResultP;
+    await this.pywork.destroy(pyDecodeResult);
+  }
+
+  onImgDrop(event: DragEvent) {
+    this.dragActive.set(false);
+    const dt = event.dataTransfer;
+    if (dt == null) return;
+    event.stopPropagation();
+    event.preventDefault();
+    dt.dropEffect = 'copy';
+    this.handleData(dt);
+  }
+  onImgOver(event: DragEvent) {
+    const dt = event.dataTransfer;
+    if (dt == null) return;
+    event.stopPropagation();
+    event.preventDefault();
+    dt.dropEffect = 'copy';
+  }
+
+  onPaste(event: ClipboardEvent) {
+    const dt = event.clipboardData
+    if (dt == null) return;
+    event.preventDefault();
+    this.handleData(dt);
+  }
+
+  windowDragOver(event: DragEvent) {
+    event.dataTransfer!.dropEffect = 'none'
+    event.preventDefault();
+  }
+  windowDrop(event: DragEvent) {
+    event.preventDefault();
+  }
+}
+
+async function getImageDataBlobFromDataTransfer(data: DataTransfer): Promise<Blob | undefined> {
+  const dtFiles = Array.from(data.items).filter(i => i.kind === 'file').map(i => i.getAsFile()!);
+  const urls = data.getData('text/uri-list').split('\r\n').filter(s => !s.startsWith('#') && s.length > 0 && URL.canParse(s)).map(v => new URL(v));
+  // 1. data url with type `image`
+  const dataUrls = urls.filter(v => v.protocol === 'data:');
+  const dataUrlResps = await Promise.all(dataUrls.map(v => fetch(v)));
+  const dataUrlRespImage = dataUrlResps.find(r => r.headers.get('Content-Type')!.startsWith('image/'));
+  if (dataUrlRespImage !== undefined) {
+    return await dataUrlRespImage.blob();
+  }
+  // 2. file with type `image` (guessed by extension)
+  const imageFile = dtFiles.find(f => f.type.startsWith('image/'));
+  if (imageFile !== undefined) {
+    return imageFile;
+  }
+  // 3. non-data url
+  const nondataUrl = urls.find(v => v.protocol !== 'data:');
+  if (nondataUrl !== undefined) {
+    // we could try fetching all the urls and pick the one with `Content-Type: image/*`, but that's probably too expensive
+    return await (await fetch(nondataUrl)).blob();
+  }
+  // 4. non-image file
+  if (dtFiles.length > 0) {
+    return dtFiles[0];
+  }
+  // 5. non-image data url
+  if (dataUrlResps.length > 0) {
+    return await dataUrlResps[0].blob();
+  }
+  return undefined;
 }
