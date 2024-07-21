@@ -34,11 +34,13 @@ const proxyStore = new (class {
 
 onmessage = async ({ data }: { data: PyWorkRequest }) => {
   switch (data.name) {
-    // FIXME: free
     case 'decodeImage': {
       const [py, pypkg] = await init;
-      const pynparr1: PyBuffer = pypkg.decodeImage(py.toPy(await (data.data as Blob).arrayBuffer()));
-      const msg: PyWorkResponse = { type: 'r', id: data.id, data: proxyStore.add(pynparr1) };
+      const pynparr1: PyBuffer | undefined = pypkg.decodeImage(py.toPy(await (data.data as Blob).arrayBuffer()));
+      if (pynparr1 == null) {
+        console.warn("opencv could not decode image");
+      }
+      const msg: PyWorkResponse = { type: 'r', id: data.id, data: pynparr1 != null ? proxyStore.add(pynparr1) : undefined };
       postMessage(msg);
       break;
     }
@@ -53,6 +55,18 @@ onmessage = async ({ data }: { data: PyWorkRequest }) => {
       bufview.release();
       const msg: PyWorkResponse = { type: 'r', id: data.id, data: bmp };
       postMessage(msg, [bmp]);
+      break;
+    }
+    case 'loadBitmap': {
+      const [py, pypkg] = await init;
+      const bmp = data.data as ImageBitmap;
+      const canvas = new OffscreenCanvas(bmp.width, bmp.height);
+      const canvasCtx = canvas.getContext('2d', { willReadFrequently: true })!;
+      canvasCtx.drawImage(bmp, 0, 0);
+      const bmpData = canvasCtx.getImageData(0, 0, bmp.width, bmp.height);
+      const pynparr1: PyBuffer = pypkg.loadBitmap(py.toPy(bmpData.data), bmpData.width, bmpData.height);
+      const msg: PyWorkResponse = { type: 'r', id: data.id, data: proxyStore.add(pynparr1) };
+      postMessage(msg);
       break;
     }
     case 'destroy': {

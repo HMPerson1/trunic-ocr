@@ -32,7 +32,7 @@ export class PyworkService {
     }
   }
 
-  decodeImage(imgBlob: Blob): Promise<PyDecodedImageRef> {
+  decodeImage(imgBlob: Blob): Promise<PyDecodedImageRef | undefined> {
     const reqId = genReqId();
     const { promise, resolve } = Promise.withResolvers();
     this.#activeRequests.set(reqId, { resolve, progress: undefined });
@@ -48,6 +48,15 @@ export class PyworkService {
     const msg: PyWorkRequest = { id: reqId, name: 'decoded2bitmap', data: imgRef };
     this.worker.postMessage(msg);
     return promise as Promise<ImageBitmap>;
+  }
+
+  loadBitmap(bmp: ImageBitmap): Promise<PyDecodedImageRef> {
+    const reqId = genReqId();
+    const { promise, resolve } = Promise.withResolvers();
+    this.#activeRequests.set(reqId, { resolve, progress: undefined });
+    const msg: PyWorkRequest = { id: reqId, name: 'loadBitmap', data: bmp };
+    this.worker.postMessage(msg);
+    return promise as Promise<PyDecodedImageRef>;
   }
 
   destroy(imgRef: PyDecodedImageRef): Promise<void> {

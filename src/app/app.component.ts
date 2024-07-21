@@ -31,22 +31,28 @@ export class AppComponent {
     this.imageRenderable.set(undefined);
 
     // race python-opencv decode and browser decode
-    const pyDecodeResultP = this.pywork.decodeImage(blob);
-    const bitmap = await (async () => {
+    const browserDecodeP = createImageBitmap(blob);
+    const pyDecodeP = this.pywork.decodeImage(blob);
+    const bitmapDisplay = await (async () => {
       try {
-        return await createImageBitmap(blob);
+        return await browserDecodeP;
       } catch (e) {
         console.warn("browser could not decode image", e);
       }
-      const pyDecodeResult = await pyDecodeResultP;
-      if (pyDecodeResult !== undefined) {
+      const pyDecodeResult = await pyDecodeP;
+      if (pyDecodeResult != null) {
         return await this.pywork.decoded2bitmap(pyDecodeResult);
       }
       throw new Error("could not decode image");
     })();
-    this.imageRenderable.set(bitmap);
-    const pyDecodeResult = await pyDecodeResultP;
-    await this.pywork.destroy(pyDecodeResult);
+    this.imageRenderable.set(bitmapDisplay);
+
+    // if we get here, at least one decode succeeded
+    const pyImage = await pyDecodeP ?? await this.pywork.loadBitmap(await browserDecodeP);
+    try {
+    } finally {
+      await this.pywork.destroy(pyImage);
+    }
   }
 
   onImgDrop(event: DragEvent) {
