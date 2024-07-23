@@ -59,6 +59,15 @@ export class PyworkService {
     return promise as Promise<PyDecodedImageRef>;
   }
 
+  oneshotRecognize(imgRef: PyDecodedImageRef): Promise<[Map<unknown, unknown>, Uint8Array, Float64Array]> {
+    const reqId = genReqId();
+    const { promise, resolve } = Promise.withResolvers();
+    this.#activeRequests.set(reqId, { resolve, progress: undefined });
+    const msg: PyWorkRequest = { id: reqId, name: 'oneshotRecognize', data: imgRef };
+    this.worker.postMessage(msg);
+    return promise as Promise<[Map<unknown, unknown>, Uint8Array, Float64Array]>;
+  }
+
   destroy(imgRef: PyDecodedImageRef): Promise<void> {
     const reqId = genReqId();
     const { promise, resolve } = Promise.withResolvers();

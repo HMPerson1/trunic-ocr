@@ -50,6 +50,7 @@ export class AppComponent {
     // if we get here, at least one decode succeeded
     const pyImage = await pyDecodeP ?? await this.pywork.loadBitmap(await browserDecodeP);
     try {
+      console.log(await this.pywork.oneshotRecognize(pyImage));
     } finally {
       await this.pywork.destroy(pyImage);
     }

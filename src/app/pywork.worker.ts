@@ -50,7 +50,7 @@ onmessage = async ({ data }: { data: PyWorkRequest }) => {
       const bufview = pynparr2.getBuffer();
       pynparr2.destroy();
       const [h, w, d] = bufview.shape;
-      if (!(d === 4 && bufview.data instanceof Uint8Array)) throw new Error("bad py buffer")
+      if (!(bufview.shape.length === 3 && d === 4 && bufview.data instanceof Uint8Array && bufview.c_contiguous)) throw new Error("bad py buffer");
       const bmp = await createImageBitmap(new ImageData(new Uint8ClampedArray(bufview.data.buffer, bufview.data.byteOffset, bufview.data.length), w));
       bufview.release();
       const msg: PyWorkResponse = { type: 'r', id: data.id, data: bmp };
@@ -69,7 +69,30 @@ onmessage = async ({ data }: { data: PyWorkRequest }) => {
       postMessage(msg);
       break;
     }
+    case 'oneshotRecognize': {
+      const [, pypkg] = await init;
+      const pyRet: PyProxy = pypkg.oneshotRecognize(proxyStore.get(data.data as PyWorkRef));
+      const [geomDataPy, glyphStrokesPy, glyphOriginsPy]: [PyProxy, PyBuffer, PyBuffer] = pyRet.toJs({ depth: 1 });
+      pyRet.destroy();
+      const geomData = geomDataPy.toJs({ create_pyproxies: false, dict_converter: Object.fromEntries });
+      geomDataPy.destroy();
+      const glyphStrokesBy = glyphStrokesPy.getBuffer();
+      glyphStrokesPy.destroy();
+      if (!(glyphStrokesBy.shape.length == 2 && glyphStrokesBy.shape[1] == 2 && glyphStrokesBy.data instanceof Uint8Array && glyphStrokesBy.c_contiguous)) throw new Error("bad py buffer");
+      const glyphStrokes = new Uint8Array(glyphStrokesBy.data);
+      glyphStrokesBy.release();
+      const glyphOriginsBy = glyphOriginsPy.getBuffer();
+      glyphOriginsPy.destroy();
+      if (!(glyphOriginsBy.shape.length == 2 && glyphOriginsBy.shape[1] == 2 && glyphOriginsBy.data instanceof Int32Array && glyphOriginsBy.c_contiguous)) throw new Error("bad py buffer");
+      const glyphOrigins = new Int32Array(glyphOriginsBy.data);
+      glyphOriginsBy.release();
+
+      const msg: PyWorkResponse = { type: 'r', id: data.id, data: [geomData, glyphStrokes, glyphOrigins] };
+      postMessage(msg, [glyphStrokes.buffer, glyphOrigins.buffer]);
+      break;
+    }
     case 'destroy': {
+      await init;
       const ref = data.data as PyWorkRef;
       const pyobj: PyProxy = proxyStore.get(ref);
       proxyStore.del(ref);
