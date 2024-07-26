@@ -8,3 +8,14 @@ circle {
     stroke-linecap: round;
     fill: transparent;
 }
+
+rect {
+    fill: #000;
+    opacity: .6;
+}
+
+text {
+    fill: #fff;
+    text-anchor: middle;
+    dominant-baseline: middle;
+}
