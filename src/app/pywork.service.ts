@@ -59,13 +59,13 @@ export class PyworkService {
     return promise as Promise<PyDecodedImageRef>;
   }
 
-  oneshotRecognize(imgRef: PyDecodedImageRef): Promise<[Map<unknown, unknown>, Uint8Array, Float64Array]> {
+  oneshotRecognize(imgRef: PyDecodedImageRef): Promise<[GlyphGeometry, Uint8Array, Float64Array]> {
     const reqId = genReqId();
     const { promise, resolve } = Promise.withResolvers();
     this.#activeRequests.set(reqId, { resolve, progress: undefined });
     const msg: PyWorkRequest = { id: reqId, name: 'oneshotRecognize', data: imgRef };
     this.worker.postMessage(msg);
-    return promise as Promise<[Map<unknown, unknown>, Uint8Array, Float64Array]>;
+    return promise as Promise<[GlyphGeometry, Uint8Array, Float64Array]>;
   }
 
   destroy(imgRef: PyDecodedImageRef): Promise<void> {
@@ -80,6 +80,14 @@ export class PyworkService {
 
 declare const tag_decodedImage: unique symbol;
 export type PyDecodedImageRef = PyWorkRef & { [tag_decodedImage]: null };
+
+export type GlyphGeometry = {
+  stroke_width: number,
+  glyph_template_shape: [number, number],
+  glyph_template_origin: [number, number],
+  all_lines: Array<Array<[[number, number], [number, number]]>>,
+  circle_center: [number, number],
+}
 
 type RequestEntry = { resolve: (d: unknown) => void, progress?: (p: unknown) => void };
 

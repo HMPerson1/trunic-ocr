@@ -1,6 +1,17 @@
 <div class="img-drop-container">
   @if (imageRenderable() !== undefined) {
-  <canvas app-image-renderer-canvas class="img-display" [data]="imageRenderable()"></canvas>
+  <canvas app-image-renderer-canvas class="img-display" [data]="imageRenderable()!"
+    #imgDisplay="app-image-renderer-canvas"></canvas>
+  @if (recognizedGlyphs(); as recognizedGlyphs) {
+  @let geometry = recognizedGlyphs[0];
+  @let transform = imgDisplay.imgTransform().scale(1/3);
+  @for (glyph of recognizedGlyphs[1]; track $index) {
+  @let origin = transform.transformPoint(glyph.origin);
+  <app-trunic-glyph [geometry]="geometry" [strokesPacked]="glyph.strokes" [renderScale]="transform.a"
+    [style.top.px]="origin.y" [style.left.px]="origin.x">
+  </app-trunic-glyph>
+  }
+  }
   } @else {
   <div class="img-drop-help">
     @if (hasInputImage()) {

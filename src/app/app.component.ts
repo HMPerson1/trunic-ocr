@@ -1,11 +1,12 @@
-import { Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { ImageRendererCanvasComponent } from './image-renderer-canvas/image-renderer-canvas.component';
-import { PyworkService } from './pywork.service';
+import { PyworkService, type GlyphGeometry } from './pywork.service';
+import { TrunicGlyphComponent } from './trunic-glyph/trunic-glyph.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [ImageRendererCanvasComponent],
+  imports: [ImageRendererCanvasComponent, TrunicGlyphComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
   host: {
@@ -13,10 +14,12 @@ import { PyworkService } from './pywork.service';
     '(window:drop)': 'windowDrop($event)',
     '(window:paste)': 'onPaste($event)',
   },
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent {
   readonly hasInputImage = signal(false);
   readonly imageRenderable = signal<ImageBitmap | undefined>(undefined);
+  readonly recognizedGlyphs = signal<[GlyphGeometry, { strokes: number, origin: DOMPointReadOnly }[]] | undefined>(undefined);
   readonly dragActive = signal(false);
 
   constructor(private readonly pywork: PyworkService) {
@@ -29,6 +32,7 @@ export class AppComponent {
     }
     this.hasInputImage.set(true);
     this.imageRenderable.set(undefined);
+    this.recognizedGlyphs.set(undefined);
 
     // race python-opencv decode and browser decode
     const browserDecodeP = createImageBitmap(blob);
@@ -50,7 +54,13 @@ export class AppComponent {
     // if we get here, at least one decode succeeded
     const pyImage = await pyDecodeP ?? await this.pywork.loadBitmap(await browserDecodeP);
     try {
-      console.log(await this.pywork.oneshotRecognize(pyImage));
+      const [glyphGeometry, strokesPackedFlat, originsFlat] = await this.pywork.oneshotRecognize(pyImage);
+      this.recognizedGlyphs.set([glyphGeometry,
+        Array.from({ length: originsFlat.length / 2 }, (_v, i) => ({
+          origin: new DOMPointReadOnly(originsFlat[i * 2], originsFlat[i * 2 + 1]),
+          strokes: (strokesPackedFlat[i * 2 + 1] << 6) | strokesPackedFlat[i * 2]
+        }))
+      ]);
     } finally {
       await this.pywork.destroy(pyImage);
     }

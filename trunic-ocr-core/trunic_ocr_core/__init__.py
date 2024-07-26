@@ -1,10 +1,11 @@
 from dataclasses import dataclass
+import gc
 import math
-from typing import TYPE_CHECKING, Any
 
 import cv2
 import numpy as np
 import numpy.typing as npt
+
 
 type NDArray_u8 = npt.NDArray[np.uint8]
 type NDArray_f32 = npt.NDArray[np.float32]
@@ -31,14 +32,16 @@ def loadBitmap(bmpData: memoryview, width: int, height: int) -> NDArray_u8:
 def oneshotRecognize(src_raw: NDArray_u8):
     src, upscale = preprocess(src_raw)
     strokes_raw = segmentThreshold(src, upscale)
+    del src
     medialAxis, medialAxisMask = mkMedialAxis(strokes_raw)
     stroke_width = findStrokeWidth(medialAxis)
     strokes = clean_strokes(strokes_raw, medialAxis, stroke_width)
+    del strokes_raw
+    del medialAxis
     strokes_f = np.float32(strokes)
-    baselines, _baseline_seeds, baselines_spec = find_baselines(
-        upscale, stroke_width, strokes_f
-    )
+    baselines, baselines_spec = find_baselines(upscale, stroke_width, strokes_f)
     stroke_angle = find_stroke_angle(medialAxisMask, strokes)
+    del medialAxisMask
     segments_raw_vert, segment_coords_raw_vert = find_vertical_segments(
         upscale, stroke_width, strokes, strokes_f, baselines
     )
@@ -49,7 +52,13 @@ def oneshotRecognize(src_raw: NDArray_u8):
         segment_coords_raw_slant_n,
     ) = find_slanted_segments(upscale, stroke_width, strokes, strokes_f, stroke_angle)
     all_segments_raw = segments_raw_vert | segments_raw_slant_p | segments_raw_slant_n
+    del segments_raw_vert
+    del segments_raw_slant_p
+    del segments_raw_slant_n
     approx_glyph_height = find_approx_glyph_height(strokes, baselines, all_segments_raw)
+    del strokes
+    del baselines
+    del all_segments_raw
     all_endpoints = np.concatenate(
         (
             *segment_coords_raw_vert,
@@ -67,6 +76,10 @@ def oneshotRecognize(src_raw: NDArray_u8):
         approx_glyph_height,
         all_endpoints,
     )
+    del all_endpoints
+    del segment_coords_raw_vert
+    del segment_coords_raw_slant_p
+    del segment_coords_raw_slant_n
 
     glyph_width = grid1[0] * 2
     glyph_height = offset_l[1] - offset_u[1] + grid2[1] * 2
@@ -81,20 +94,27 @@ def oneshotRecognize(src_raw: NDArray_u8):
         ],
         dtype=np.uint32,
     )
-    glyph_template_geometry = dict(
-        stroke_width=stroke_width,
-        grid1=grid1,
-        grid2=grid2,
-        offset_u=offset_u,
-        offset_l=offset_l,
-        glyph_width=glyph_width,
-        glyph_template_shape=glyph_template_shape,
-        glyph_template_origin=glyph_template_origin,
-    )
 
-    glyph_template, glyph_template_mask, glyph_template_base = make_template(
-        **glyph_template_geometry
+    (
+        all_lines,
+        circle_center,
+        glyph_template,
+        glyph_template_mask,
+        glyph_template_base,
+    ) = make_template(
+        stroke_width,
+        grid1,
+        grid2,
+        offset_u,
+        offset_l,
+        glyph_width,
+        glyph_template_shape,
+        glyph_template_origin,
     )
+    del grid1
+    del grid2
+    del offset_u
+    del offset_l
 
     glyph_origins_raw = np.array(
         [
@@ -104,7 +124,10 @@ def oneshotRecognize(src_raw: NDArray_u8):
         ],
         dtype=np.int32,
     )
+    del baselines_spec
+    del glyph_width
 
+    gc.collect()
     glyphs_strokes, glyphs_origins = fit_glyphs(
         upscale,
         stroke_width,
@@ -126,12 +149,16 @@ def oneshotRecognize(src_raw: NDArray_u8):
         axis=1,
     )
 
-    glyph_template_geometry["glyph_template_origin"] = tuple(map(int, glyph_template_origin))
-
     return (
-        glyph_template_geometry,
+        dict(
+            stroke_width=stroke_width,
+            glyph_template_shape=glyph_template_shape,
+            glyph_template_origin=tuple(map(int, glyph_template_origin)),
+            all_lines=all_lines,
+            circle_center=circle_center,
+        ),
         np.ascontiguousarray(glyphs_strokes_packed),
-        np.ascontiguousarray(glyphs_origins),
+        np.ascontiguousarray(glyphs_origins - np.int32(glyph_template_origin)),
     )
 
 
@@ -320,7 +347,7 @@ def find_baselines(
         bslns_seed[spec.as_roi()] = 1
 
     baselines = cv2.dilate(bslns_seed, mk_circle(stroke_width))
-    return baselines, bslns_seed, baselines_spec
+    return baselines, baselines_spec
 
 
 def find_stroke_angle(
@@ -703,7 +730,7 @@ def make_template(
         # bottom circle
         [],
         # baseline
-        [[[0, 0], [glyph_width, 0]]],
+        [[[0.0, 0.0], [glyph_width, 0]]],
     ]
     glyph_template_uint8 = np.zeros((13, *glyph_template_shape), dtype=np.uint8)
     for canvas, polyline in zip(glyph_template_uint8, all_lines):
@@ -716,9 +743,10 @@ def make_template(
             lineType=cv2.LINE_AA,
             shift=16,
         )
+    circle_center = pl01 + [0, stroke_width]
     cv2.circle(
         glyph_template_uint8[-2],
-        np.int32(2**16 * (pl01 + [0, stroke_width] + glyph_template_origin)),
+        np.int32(2**16 * (circle_center + glyph_template_origin)),
         2**16 * (stroke_width - 1),
         255,
         thickness=stroke_width - 1,
@@ -774,6 +802,11 @@ def make_template(
         return glyph_template_base
 
     return (
+        [
+            [[list(p + glyph_template_origin) for p in l] for l in ls]
+            for ls in all_lines
+        ],
+        list(circle_center + glyph_template_origin),
         glyph_template[:-1],
         glyph_template_mask[:-1],
         make_glyph_template_base(),
@@ -844,16 +877,17 @@ def fit_glyphs(
             best_offsets,
         )
 
+    strokes_bordered = cv2.copyMakeBorder(
+        strokes_f,
+        stroke_width,
+        stroke_width,
+        stroke_width,
+        stroke_width,
+        cv2.BORDER_CONSTANT,
+        value=0,
+    )
+
     def glyph_slice_par(offsets):
-        strokes_bordered = cv2.copyMakeBorder(
-            strokes_f,
-            stroke_width,
-            stroke_width,
-            stroke_width,
-            stroke_width,
-            cv2.BORDER_CONSTANT,
-            value=0,
-        )
         offsets = offsets + [stroke_width, stroke_width]
         return [
             strokes_bordered[offset[1] :, offset[0] :][
