@@ -21,11 +21,9 @@ export class TrunicGlyphComponent {
       .map(stroke => stroke.map(v => `${v[0][0]} ${v[0][1]} ${v[1][0]} ${v[1][1]}`))
   );
   readonly _fontsize = computed(() => (this._g().glyph_template_shape[1] - this._g().stroke_width) / 3);
-  readonly _text = computed(() => {
-    const c = CONSONANTS[this.strokesPacked() & 0x3F][0];
-    const v = VOWELS[(this.strokesPacked() >> 6) & 0x1F][0];
-    return (this.strokesPacked() & (1 << 11)) === 0 ? c + v : v + c;
-  })
+  readonly _textC = computed(() => CONSONANTS[this.strokesPacked() & 0x3F][0]);
+  readonly _textV = computed(() => VOWELS[(this.strokesPacked() >> 6) & 0x1F][0]);
+  readonly _textFlip = computed(() => (this.strokesPacked() & (1 << 11)) !== 0);
 }
 
 const VOWELS: Array<[string, string[]]> = [
