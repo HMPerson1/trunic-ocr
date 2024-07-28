@@ -1,4 +1,8 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatToolbarModule } from '@angular/material/toolbar';
 import { ImageRendererCanvasComponent } from './image-renderer-canvas/image-renderer-canvas.component';
 import { PyworkService, type GlyphGeometry } from './pywork.service';
 import { TrunicGlyphComponent } from './trunic-glyph/trunic-glyph.component';
@@ -6,7 +10,7 @@ import { TrunicGlyphComponent } from './trunic-glyph/trunic-glyph.component';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [ImageRendererCanvasComponent, TrunicGlyphComponent],
+  imports: [ImageRendererCanvasComponent, TrunicGlyphComponent, MatToolbarModule, MatIconModule, MatButtonModule, MatProgressBarModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
   host: {

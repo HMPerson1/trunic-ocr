@@ -1,16 +1,36 @@
-.img-drop-container {
-  position: absolute;
-  inset: 80px;
+:host {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+mat-toolbar {
+  gap: 8px;
+}
+
+.toolbar-spacer {
+  flex: 1 1 auto;
+}
+
+.content {
+  flex: 1;
+  padding: 40px;
   contain: strict;
 }
 
-.img-drop-zone {
+.img-drop-container {
+  height: 100%;
+  contain: strict;
+}
+
+.img-drop-indicator {
   position: absolute;
   inset: 0;
   border: 10px dashed transparent;
+  pointer-events: none;
 }
 
-.img-drop-zone.img-drop-active {
+.img-drop-indicator.img-drop-active {
   border-color: blue;
 }
 
@@ -30,12 +50,13 @@
 .help-or {
   font-size: medium;
   font-style: italic;
-  margin: 0;
+  margin: .5em 0;
 }
 
 .help-or::before {
   content: "- ";
 }
+
 .help-or::after {
   content: " -";
 }
