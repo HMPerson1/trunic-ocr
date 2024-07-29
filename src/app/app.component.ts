@@ -23,6 +23,7 @@ import { TrunicGlyphComponent } from './trunic-glyph/trunic-glyph.component';
 export class AppComponent {
   readonly hasInputImage = signal(false);
   readonly imageRenderable = signal<ImageBitmap | undefined>(undefined);
+  readonly ocrProgress = signal<undefined | number>(undefined);
   readonly recognizedGlyphs = signal<[GlyphGeometry, { strokes: number, origin: DOMPointReadOnly }[]] | undefined>(undefined);
   readonly dragActive = signal(false);
 
@@ -36,6 +37,7 @@ export class AppComponent {
     }
     this.hasInputImage.set(true);
     this.imageRenderable.set(undefined);
+    this.ocrProgress.set(undefined);
     this.recognizedGlyphs.set(undefined);
 
     // race python-opencv decode and browser decode
@@ -58,7 +60,9 @@ export class AppComponent {
     // if we get here, at least one decode succeeded
     const pyImage = await pyDecodeP ?? await this.pywork.loadBitmap(await browserDecodeP);
     try {
-      const [glyphGeometry, strokesPackedFlat, originsFlat] = await this.pywork.oneshotRecognize(pyImage);
+      const [ocrDone, ocrProgress] = this.pywork.oneshotRecognize(pyImage);
+      await ocrProgress.forEach(v => this.ocrProgress.set(v * 100));
+      const [glyphGeometry, strokesPackedFlat, originsFlat] = await ocrDone;
       this.recognizedGlyphs.set([glyphGeometry,
         Array.from({ length: originsFlat.length / 2 }, (_v, i) => ({
           origin: new DOMPointReadOnly(originsFlat[i * 2], originsFlat[i * 2 + 1]),

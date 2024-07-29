@@ -6,7 +6,7 @@ export type PyWorkRequest = {
 export type PyWorkProgress = {
     type: 'p',
     id: number,
-    progress: number,
+    progress: unknown,
 }
 export type PyWorkResponse = {
     type: 'r'

@@ -1,11 +1,10 @@
-from dataclasses import dataclass
 import gc
 import math
+from dataclasses import dataclass
 
 import cv2
 import numpy as np
 import numpy.typing as npt
-
 
 type NDArray_u8 = npt.NDArray[np.uint8]
 type NDArray_f32 = npt.NDArray[np.float32]
@@ -31,34 +30,45 @@ def loadBitmap(bmpData: memoryview, width: int, height: int) -> NDArray_u8:
 
 def oneshotRecognize(src_raw: NDArray_u8):
     src, upscale = preprocess(src_raw)
+    yield 1
     strokes_raw = segmentThreshold(src, upscale)
     del src
+    yield 2
     medialAxis, medialAxisMask = mkMedialAxis(strokes_raw)
+    yield 3
     stroke_width = findStrokeWidth(medialAxis)
+    yield 4
     strokes = clean_strokes(strokes_raw, medialAxis, stroke_width)
     del strokes_raw
     del medialAxis
     strokes_f = np.float32(strokes)
+    yield 5
     baselines, baselines_spec = find_baselines(upscale, stroke_width, strokes_f)
+    yield 6
     stroke_angle = find_stroke_angle(medialAxisMask, strokes)
     del medialAxisMask
+    yield 7
     segments_raw_vert, segment_coords_raw_vert = find_vertical_segments(
         upscale, stroke_width, strokes, strokes_f, baselines
     )
+    yield 8
     (
         segments_raw_slant_p,
         segment_coords_raw_slant_p,
         segments_raw_slant_n,
         segment_coords_raw_slant_n,
     ) = find_slanted_segments(upscale, stroke_width, strokes, strokes_f, stroke_angle)
+    yield 9
     all_segments_raw = segments_raw_vert | segments_raw_slant_p | segments_raw_slant_n
     del segments_raw_vert
     del segments_raw_slant_p
     del segments_raw_slant_n
+    yield 10
     approx_glyph_height = find_approx_glyph_height(strokes, baselines, all_segments_raw)
     del strokes
     del baselines
     del all_segments_raw
+    yield 11
     all_endpoints = np.concatenate(
         (
             *segment_coords_raw_vert,
@@ -80,6 +90,7 @@ def oneshotRecognize(src_raw: NDArray_u8):
     del segment_coords_raw_vert
     del segment_coords_raw_slant_p
     del segment_coords_raw_slant_n
+    yield 12
 
     glyph_width = grid1[0] * 2
     glyph_height = offset_l[1] - offset_u[1] + grid2[1] * 2
@@ -92,7 +103,7 @@ def oneshotRecognize(src_raw: NDArray_u8):
             stroke_width // 2 + upscale,
             (math.ceil(glyph_height) + stroke_width) // 2 + upscale,
         ],
-        dtype=np.uint32,
+        dtype=np.int32,
     )
 
     (
@@ -115,6 +126,13 @@ def oneshotRecognize(src_raw: NDArray_u8):
     del grid2
     del offset_u
     del offset_l
+    yield 13, dict(
+        stroke_width=stroke_width,
+        glyph_template_shape=glyph_template_shape,
+        glyph_template_origin=tuple(map(int, glyph_template_origin)),
+        all_lines=all_lines,
+        circle_center=circle_center,
+    )
 
     glyph_origins_raw = np.array(
         [
@@ -128,7 +146,7 @@ def oneshotRecognize(src_raw: NDArray_u8):
     del glyph_width
 
     gc.collect()
-    glyphs_strokes, glyphs_origins = fit_glyphs(
+    glyphs_strokes, glyphs_origins = yield from fit_glyphs(
         upscale,
         stroke_width,
         strokes_f,
@@ -150,15 +168,8 @@ def oneshotRecognize(src_raw: NDArray_u8):
     )
 
     return (
-        dict(
-            stroke_width=stroke_width,
-            glyph_template_shape=glyph_template_shape,
-            glyph_template_origin=tuple(map(int, glyph_template_origin)),
-            all_lines=all_lines,
-            circle_center=circle_center,
-        ),
         np.ascontiguousarray(glyphs_strokes_packed),
-        np.ascontiguousarray(glyphs_origins - np.int32(glyph_template_origin)),
+        np.ascontiguousarray(glyphs_origins - glyph_template_origin),
     )
 
 
@@ -943,6 +954,7 @@ def fit_glyphs(
         current_offset[active_mask] = np_index_par(offsets, next_i, axis=1)[
             next_active_mask
         ]
+        yield i
 
     return current_templates_strokes, current_offset + glyph_origins
 

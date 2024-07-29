@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { Subject, type Observable } from 'rxjs';
 import type { PyWorkProgress, PyWorkRef, PyWorkRequest, PyWorkResponse } from './worker-api.ts';
 
 @Injectable({
@@ -59,13 +60,15 @@ export class PyworkService {
     return promise as Promise<PyDecodedImageRef>;
   }
 
-  oneshotRecognize(imgRef: PyDecodedImageRef): Promise<[GlyphGeometry, Uint8Array, Float64Array]> {
+  oneshotRecognize(imgRef: PyDecodedImageRef): [Promise<[GlyphGeometry, Uint8Array, Float64Array]>, Observable<number>] {
     const reqId = genReqId();
+    const progOut = new Subject<number>()
     const { promise, resolve } = Promise.withResolvers();
-    this.#activeRequests.set(reqId, { resolve, progress: undefined });
+    promise.then(() => progOut.complete());
+    this.#activeRequests.set(reqId, { resolve, progress: v => progOut.next((v as any)[0]) });
     const msg: PyWorkRequest = { id: reqId, name: 'oneshotRecognize', data: imgRef };
     this.worker.postMessage(msg);
-    return promise as Promise<[GlyphGeometry, Uint8Array, Float64Array]>;
+    return [promise as Promise<[GlyphGeometry, Uint8Array, Float64Array]>, progOut.asObservable()];
   }
 
   destroy(imgRef: PyDecodedImageRef): Promise<void> {

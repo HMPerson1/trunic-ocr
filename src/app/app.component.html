@@ -3,7 +3,8 @@
   <span class="toolbar-spacer"></span>
   <button mat-icon-button><mat-icon>info</mat-icon></button>
 </mat-toolbar>
-<mat-progress-bar mode="determinate" value="0"></mat-progress-bar>
+<mat-progress-bar [mode]="hasInputImage() && ocrProgress() === undefined ? 'query' : 'determinate'"
+  [value]="ocrProgress()"></mat-progress-bar>
 <div class="content">
   <div class="img-drop-container" #dropZone (drop)="onImgDrop($event)" (dragover)="onImgOver($event)"
     (dragleave)="!dropZone.contains($any($event.relatedTarget)) && dragActive.set(false)"
