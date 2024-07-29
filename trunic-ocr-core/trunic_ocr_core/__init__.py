@@ -176,23 +176,21 @@ def segmentThreshold(
     thresh_block_size = (
         round(min(blurred.shape[0], blurred.shape[1]) * athresh_range_pct / 200) * 2 + 1
     )
-    thresh = cv2.adaptiveThreshold(
-        blurred,
-        1,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY_INV,
-        thresh_block_size,
-        athres_val,
+    # equivalent to `cv2.adaptiveThreshold`
+    img_mean = np.int16(
+        cv2.GaussianBlur(
+            np.float32(blurred),
+            (thresh_block_size, thresh_block_size),
+            0,
+            borderType=(cv2.BORDER_REPLICATE | cv2.BORDER_ISOLATED),
+        )
+        + 0.5
     )
+    diff = blurred - img_mean
+    thresh = np.uint8(diff <= -athres_val)
+    thresh_inv = np.uint8(diff >= athres_val)
+
     avg_foregnd = np.mean(blurred[thresh > 0])
-    thresh_inv = cv2.adaptiveThreshold(
-        255 - blurred,
-        1,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY_INV,
-        thresh_block_size,
-        athres_val,
-    )
     avg_foregnd_inv = np.mean(blurred[thresh_inv > 0])
     border_avg = np.mean(np.concatenate([*blurred[:, [0, -1]], *blurred[[0, -1], :]]))
     ret = (
@@ -546,12 +544,12 @@ def find_approx_glyph_height(
     all_segments_raw: NDArray_u8,
     percentile=95,
 ) -> int:
-    dist_baseline = np.uint32(cv2.distanceTransform(~(baselines * 255), cv2.DIST_C, 3))
+    dist_baseline = np.uint32(cv2.distanceTransform(1 - baselines, cv2.DIST_C, 3))
 
     strokes_notbl = strokes & all_segments_raw
 
     _dist_nbs, nbs_vrnoi = cv2.distanceTransformWithLabels(
-        ~(strokes_notbl * 255), cv2.DIST_C, 3
+        1 - strokes_notbl, cv2.DIST_C, 3
     )
 
     dist_bline_ccmax = np.zeros(strokes.shape)
