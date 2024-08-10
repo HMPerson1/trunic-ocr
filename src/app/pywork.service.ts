@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Subject, type Observable } from 'rxjs';
-import type { PyWorkProgress, PyWorkRef, PyWorkRequest, PyWorkResponse } from './worker-api.ts';
+import type { PyWorkError, PyWorkProgress, PyWorkRef, PyWorkRequest, PyWorkResponse } from './worker-api.ts';
 
 @Injectable({
   providedIn: 'root'
@@ -12,22 +12,34 @@ export class PyworkService {
   constructor() {
     this.worker.onerror = (ev) => console.error("worker error", ev);
     this.worker.onmessageerror = (ev) => console.error("worker message error", ev);
-    this.worker.onmessage = ({ data }: { data: PyWorkProgress | PyWorkResponse }) => {
+    this.worker.onmessage = ({ data }: { data: PyWorkProgress | PyWorkResponse | PyWorkError }) => {
+      const entry = this.#activeRequests.get(data.id)
+      if (entry === undefined) throw new Error("unknown id", { cause: data });
       switch (data.type) {
         case 'p': {
-          const entry = this.#activeRequests.get(data.id)
-          if (entry === undefined) throw new Error("unknown id", { cause: data });
-          entry.progress?.(data.progress);
+          if (entry.progress == null) {
+            console.warn("unexpected progress", data.data);
+          } else {
+            entry.progress(data.data);
+          }
           break;
         }
         case 'r': {
-          const entry = this.#activeRequests.get(data.id)
-          if (entry === undefined) throw new Error("unknown id", { cause: data });
           entry.resolve(data.data);
           this.#activeRequests.delete(data.id);
           break;
         }
+        case 'e': {
+          if (entry.reject == null) {
+            console.warn("unhandled reject", data.data);
+          } else {
+            entry.reject(data.data);
+          }
+          this.#activeRequests.delete(data.id);
+          break;
+        }
         default:
+          const _never: never = data;
           throw new Error("malformed message", { cause: data })
       }
     }
@@ -36,7 +48,7 @@ export class PyworkService {
   decodeImage(imgBlob: Blob): Promise<PyDecodedImageRef | undefined> {
     const reqId = genReqId();
     const { promise, resolve } = Promise.withResolvers();
-    this.#activeRequests.set(reqId, { resolve, progress: undefined });
+    this.#activeRequests.set(reqId, { resolve, progress: undefined, reject: undefined });
     const msg: PyWorkRequest = { id: reqId, name: 'decodeImage', data: imgBlob };
     this.worker.postMessage(msg);
     return promise as Promise<PyDecodedImageRef>;
@@ -45,7 +57,7 @@ export class PyworkService {
   decoded2bitmap(imgRef: PyDecodedImageRef): Promise<ImageBitmap> {
     const reqId = genReqId();
     const { promise, resolve } = Promise.withResolvers();
-    this.#activeRequests.set(reqId, { resolve, progress: undefined });
+    this.#activeRequests.set(reqId, { resolve, progress: undefined, reject: undefined });
     const msg: PyWorkRequest = { id: reqId, name: 'decoded2bitmap', data: imgRef };
     this.worker.postMessage(msg);
     return promise as Promise<ImageBitmap>;
@@ -54,28 +66,38 @@ export class PyworkService {
   loadBitmap(bmp: ImageBitmap): Promise<PyDecodedImageRef> {
     const reqId = genReqId();
     const { promise, resolve } = Promise.withResolvers();
-    this.#activeRequests.set(reqId, { resolve, progress: undefined });
+    this.#activeRequests.set(reqId, { resolve, progress: undefined, reject: undefined });
     const msg: PyWorkRequest = { id: reqId, name: 'loadBitmap', data: bmp };
     this.worker.postMessage(msg);
     return promise as Promise<PyDecodedImageRef>;
   }
 
-  oneshotRecognize(imgRef: PyDecodedImageRef): [Promise<[GlyphGeometry, Uint8Array, Float64Array]>, Observable<number>] {
+  oneshotRecognize(imgRef: PyDecodedImageRef): [Promise<[GlyphGeometry, Uint8Array, Float64Array]>, Observable<number>, () => Promise<void>] {
     const reqId = genReqId();
     const progOut = new Subject<number>()
-    const { promise, resolve } = Promise.withResolvers();
-    promise.then(() => progOut.complete());
-    this.#activeRequests.set(reqId, { resolve, progress: v => progOut.next((v as any)[0]) });
+    const { promise, resolve, reject } = Promise.withResolvers();
+    promise.finally(() => progOut.complete()); // don't also error the observable
+    this.#activeRequests.set(reqId, { resolve, progress: v => progOut.next((v as any)[0]), reject });
     const msg: PyWorkRequest = { id: reqId, name: 'oneshotRecognize', data: imgRef };
     this.worker.postMessage(msg);
-    return [promise as Promise<[GlyphGeometry, Uint8Array, Float64Array]>, progOut.asObservable()];
+    const cancel = async () => { await this.interrupt(reqId); try { await promise; } catch { } }
+    return [promise as Promise<[GlyphGeometry, Uint8Array, Float64Array]>, progOut.asObservable(), cancel];
   }
 
   destroy(imgRef: PyDecodedImageRef): Promise<void> {
     const reqId = genReqId();
     const { promise, resolve } = Promise.withResolvers();
-    this.#activeRequests.set(reqId, { resolve, progress: undefined });
+    this.#activeRequests.set(reqId, { resolve, progress: undefined, reject: undefined });
     const msg: PyWorkRequest = { id: reqId, name: 'destroy', data: imgRef };
+    this.worker.postMessage(msg);
+    return promise as Promise<undefined>;
+  }
+
+  interrupt(targetReqId: number): Promise<void> {
+    const reqId = genReqId();
+    const { promise, resolve } = Promise.withResolvers();
+    this.#activeRequests.set(reqId, { resolve, progress: undefined, reject: undefined });
+    const msg: PyWorkRequest = { id: reqId, name: 'interrupt', data: targetReqId };
     this.worker.postMessage(msg);
     return promise as Promise<undefined>;
   }
@@ -92,7 +114,7 @@ export type GlyphGeometry = {
   circle_center: [number, number],
 }
 
-type RequestEntry = { resolve: (d: unknown) => void, progress?: (p: unknown) => void };
+type RequestEntry = { resolve: (d: unknown) => void, progress?: (d: unknown) => void, reject?: (d: unknown) => void };
 
 function genReqId(): number {
   return (Math.random() * (2 ** 31)) | 0

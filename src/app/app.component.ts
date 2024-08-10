@@ -26,6 +26,7 @@ export class AppComponent {
   readonly ocrProgress = signal<undefined | number>(undefined);
   readonly recognizedGlyphs = signal<[GlyphGeometry, { strokes: number, origin: DOMPointReadOnly }[]] | undefined>(undefined);
   readonly dragActive = signal(false);
+  cancelCurrentOcr?: () => Promise<void> = undefined;
 
   constructor(private readonly pywork: PyworkService) {
   }
@@ -39,6 +40,21 @@ export class AppComponent {
     this.imageRenderable.set(undefined);
     this.ocrProgress.set(undefined);
     this.recognizedGlyphs.set(undefined);
+
+    let resolveCancel: ((v: undefined) => void) | undefined;
+    const lastCancelCurrentOcr = this.cancelCurrentOcr;
+    this.cancelCurrentOcr = () => new Promise(resolve => resolveCancel = resolve);
+
+    if (lastCancelCurrentOcr) {
+      await lastCancelCurrentOcr();
+      if (resolveCancel) {
+        resolveCancel(undefined);
+        return;
+      }
+      this.ocrProgress.set(undefined);
+      this.recognizedGlyphs.set(undefined);
+    }
+
 
     // race python-opencv decode and browser decode
     const browserDecodeP = createImageBitmap(blob);
@@ -60,15 +76,38 @@ export class AppComponent {
     // if we get here, at least one decode succeeded
     const pyImage = await pyDecodeP ?? await this.pywork.loadBitmap(await browserDecodeP);
     try {
-      const [ocrDone, ocrProgress] = this.pywork.oneshotRecognize(pyImage);
-      await ocrProgress.forEach(v => this.ocrProgress.set(v * 100));
-      const [glyphGeometry, strokesPackedFlat, originsFlat] = await ocrDone;
-      this.recognizedGlyphs.set([glyphGeometry,
-        Array.from({ length: originsFlat.length / 2 }, (_v, i) => ({
-          origin: new DOMPointReadOnly(originsFlat[i * 2], originsFlat[i * 2 + 1]),
-          strokes: (strokesPackedFlat[i * 2 + 1] << 6) | strokesPackedFlat[i * 2]
-        }))
-      ]);
+      if (resolveCancel) {
+        resolveCancel(undefined);
+        return;
+      }
+
+      const [ocrDone, ocrProgress, cancel] = this.pywork.oneshotRecognize(pyImage);
+      const ocrProgressSub = ocrProgress.subscribe(v => this.ocrProgress.set(v * 100));
+      const ocrDoneThen = ocrDone.then(([glyphGeometry, strokesPackedFlat, originsFlat]) => {
+        this.recognizedGlyphs.set([glyphGeometry,
+          Array.from({ length: originsFlat.length / 2 }, (_v, i) => ({
+            origin: new DOMPointReadOnly(originsFlat[i * 2], originsFlat[i * 2 + 1]),
+            strokes: (strokesPackedFlat[i * 2 + 1] << 6) | strokesPackedFlat[i * 2]
+          }))
+        ]);
+      });
+
+      let wasCancelled = false;
+      const thisCancelCurrentOcr = async () => {
+        wasCancelled = true;
+        await cancel();
+        try { await ocrDoneThen; } catch { }
+      };
+      this.cancelCurrentOcr = thisCancelCurrentOcr;
+
+      try {
+        await ocrDoneThen;
+      } catch (e) {
+        if (!wasCancelled) throw e;
+      } finally {
+        if (this.cancelCurrentOcr === thisCancelCurrentOcr) this.cancelCurrentOcr = undefined;
+        ocrProgressSub.unsubscribe();
+      }
     } finally {
       await this.pywork.destroy(pyImage);
     }
