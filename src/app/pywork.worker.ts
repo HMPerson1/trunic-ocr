@@ -4,6 +4,10 @@ import { loadPyodide, type PyodideInterface } from "pyodide";
 import type { PyBuffer, PyGenerator, PyIterator, PyProxy, TypedArray } from "pyodide/ffi";
 import type { PyWorkError, PyWorkProgress, PyWorkRef, PyWorkRequest, PyWorkResponse } from "./worker-api";
 
+if (!isLittleEndian()) {
+  throw new Error('not_little_endian');
+}
+
 const init = (async () => {
   const [pyodide, trunicOcrWheel] = await Promise.all([
     loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/", packages: ["numpy", "opencv-python"] }),
@@ -175,3 +179,7 @@ const mkPostProgress = (id: number, interruptedToken: unknown): PostProgressFn =
   }
   return;
 }) as any;
+
+function isLittleEndian(): boolean {
+  return new Uint8Array(Uint16Array.of(1).buffer)[0] === 1;
+}

@@ -10,7 +10,14 @@ export class PyworkService {
   readonly #activeRequests = new Map<number, RequestEntry>();
 
   constructor() {
-    this.worker.onerror = (ev) => console.error("worker error", ev);
+    this.worker.onerror = (ev) => {
+      console.error("worker error", ev);
+      const err = new Error("worker error", { cause: ev })
+      if (ev.message.includes('not_little_endian')) {
+        (err as any).snackbarMessageOverride = "This app only works on little-endian systems.";
+      };
+      throw err;
+    };
     this.worker.onmessageerror = (ev) => console.error("worker message error", ev);
     this.worker.onmessage = ({ data }: { data: PyWorkProgress | PyWorkResponse | PyWorkError }) => {
       const entry = this.#activeRequests.get(data.id)
