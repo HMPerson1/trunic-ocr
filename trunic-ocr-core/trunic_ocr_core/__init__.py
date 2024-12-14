@@ -101,7 +101,7 @@ def oneshotRecognize(src_raw: NDArray_u8):
     glyph_template_origin = np.array(
         [
             stroke_width // 2 + upscale,
-            (math.ceil(glyph_height) + stroke_width) // 2 + upscale,
+            -offset_u[1] + grid2[1] + stroke_width // 2 + upscale,
         ],
         dtype=np.int32,
     )
