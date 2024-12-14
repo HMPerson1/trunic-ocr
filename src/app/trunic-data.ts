@@ -4,7 +4,7 @@ export const CNSNT_LUT: ReadonlyArray<number> = [-128, -1, -1, -1, -1, 22, -1, -
 type VowelTab<T> = ReadonlyArray<ReadonlyArray<T>> & { length: 18 };
 const VOWELS_MW: VowelTab<string> = [["a"], ["ȯ", "ä"], ["i"], ["e"], ["u̇"], ["ə"], ["ē"], ["ü"], ["ər"], ["ȯr"], ["är"], ["ir"], ["ā"], ["ī"], ["ȯi"], ["au̇"], ["ō"], ["er"]];
 const VOWELS_OED: VowelTab<string> = [["æ"], ["ɑ", "ɔ"], ["ɪ"], ["ɛ"], ["ʊ"], ["ə"], ["i"], ["u"], ["ər"], ["ɔr"], ["ɑr"], ["ɪr"], ["eɪ"], ["aɪ"], ["ɔɪ"], ["aʊ"], ["oʊ"], ["ɛr"]];
-const VOWELS_WP: VowelTab<string> = [["æ"], ["ɒ", "ɑː", "ɔː"], ["ɪ"], ["ɛ"], ["ʊ"], ["ə"], ["iː"], ["uː"], ["ʌr, ɜːr"], ["ɒr, ɔːr"], ["ɑːr"], ["ɪər"], ["eɪ"], ["aɪ"], ["ɔɪ"], ["aʊ"], ["oʊ"], ["ɛər"]];
+const VOWELS_WP: VowelTab<string> = [["æ"], ["ɒ", "ɑː", "ɔː"], ["ɪ"], ["ɛ"], ["ʊ"], ["ʌ", "ə"], ["iː"], ["uː"], ["ʌr", "ɜːr", "ər"], ["ɒr", "ɔːr"], ["ɑːr"], ["ɪər"], ["eɪ"], ["aɪ"], ["ɔɪ"], ["aʊ"], ["oʊ"], ["ɛər"]];
 export const VOWELS_EXAMPLES: VowelTab<[string] | [string, string]> = [
     [["mat"], ["trap"], ["bath"], ["mad"], ["fan"], ["sang", "sing"]],
     [["saw"], ["lot"], ["palm"], ["cloth"], ["thought"], ["cot"], ["caught"]],
