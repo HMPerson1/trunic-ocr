@@ -11,10 +11,10 @@
     }
     }
   </g>
-  <rect class="text-backing" [attr.x]="_g().stroke_width*1.5" [attr.y]="_g().glyph_template_origin[1] - _fontsize()*0.6"
-    [attr.width]="_g().glyph_template_shape[1]-_g().stroke_width*3" [attr.height]="_fontsize()*1.2" />
-  <text [attr.x]="_g().glyph_template_shape[1]/2" [attr.y]="_g().glyph_template_origin[1]"
-    [style.font-size.px]="_fontsize()">
+</svg>
+
+<div class="ptext-align" [style.top.px]="_g().glyph_template_origin[1]">
+  <span class="ptext" [style.font-size.px]="_fontsize()">
     @if (_textFlip()) {
     <ng-container [ngTemplateOutlet]="text_tspan" [ngTemplateOutletContext]="{t: _textV()}" />
     <ng-container [ngTemplateOutlet]="text_tspan" [ngTemplateOutletContext]="{t: _textC()}" />
@@ -22,13 +22,13 @@
     <ng-container [ngTemplateOutlet]="text_tspan" [ngTemplateOutletContext]="{t: _textC()}" />
     <ng-container [ngTemplateOutlet]="text_tspan" [ngTemplateOutletContext]="{t: _textV()}" />
     }
-  </text>
-</svg>
+  </span>
+</div>
 
 <ng-template #text_tspan let-t="t">
   @if (t === null) {
-  <svg:tspan fill="red">?</svg:tspan>
+  <span class="ptext-error">?</span>
   } @else {
-  <svg:tspan>{{ t }}</svg:tspan>
+  <span>{{ t }}</span>
   }
 </ng-template>

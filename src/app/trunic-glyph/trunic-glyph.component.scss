@@ -9,15 +9,30 @@ circle {
     fill: transparent;
 }
 
-.text-backing {
-    fill: #000;
-    opacity: .6;
+.ptext-align {
+    position: absolute;
+    inset: auto 0;
+    height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-text {
-    fill: #fff;
+.ptext {
+    z-index: 1;
+    color: #fff;
     text-anchor: middle;
     dominant-baseline: middle;
+    padding: .25em;
+    background: #0009;
+
+    /* revert material typography styles that don't work well with explicit font sizes */
+    line-height: initial;
+    letter-spacing: initial;
+}
+
+.ptext-error {
+    color: #f00;
 }
 
 :host:hover {
@@ -25,7 +40,7 @@ text {
         background: #000b;
     }
 
-    & .text-backing {
-        opacity: .8;
+    & .ptext {
+        background: #000b;
     }
 }

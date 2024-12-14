@@ -21,14 +21,15 @@
     <canvas app-image-renderer-canvas class="img-display" [data]="imageRenderable()!"
       #imgDisplay="app-image-renderer-canvas"></canvas>
     @if (recognizedGlyphs(); as recognizedGlyphs) {
-    @let geometry = recognizedGlyphs[0];
-    @let transform = imgDisplay.imgTransform().scale(1/3);
-    @for (glyph of recognizedGlyphs[1]; track $index) {
-    @let origin = transform.transformPoint(glyph.origin);
-    <app-trunic-glyph [geometry]="geometry" [strokesPacked]="glyph.strokes" [pronctnSystem]="pronctnSystem()"
-      [style.top.px]="origin.y" [style.left.px]="origin.x" [style.scale]="transform.a">
-    </app-trunic-glyph>
-    }
+    <div class="glyphs-container">
+      <div class="glyphs-transformer" [style.transform]="imgDisplay.imgTransform().scale(1/3)">
+        @for (glyph of recognizedGlyphs[1]; track $index) {
+        <app-trunic-glyph [geometry]="recognizedGlyphs[0]" [pronctnSystem]="pronctnSystem()"
+          [strokesPacked]="glyph.strokes" [style.top.px]="glyph.origin.y" [style.left.px]="glyph.origin.x">
+        </app-trunic-glyph>
+        }
+      </div>
+    </div>
     }
     } @else {
     <div class="img-drop-help">

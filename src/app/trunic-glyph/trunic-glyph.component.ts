@@ -7,7 +7,7 @@ import * as trunic_data from '../trunic-data';
   selector: 'app-trunic-glyph',
   standalone: true,
   imports: [NgTemplateOutlet],
-  templateUrl: './trunic-glyph.component.svg',
+  templateUrl: './trunic-glyph.component.html',
   styleUrl: './trunic-glyph.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

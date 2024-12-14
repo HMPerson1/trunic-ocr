@@ -78,12 +78,20 @@ mat-toolbar {
   height: 100%;
 }
 
+.glyphs-container {
+  position: absolute;
+  inset: 0;
+}
+
+.glyphs-transformer {
+  transform-origin: 0 0;
+}
+
 app-trunic-glyph {
   position: absolute;
-  transform-origin: 0 0;
-  z-index: 0;
+  z-index: auto;
 
   &:hover {
-    z-index: 1;
+    z-index: 2;
   }
 }
