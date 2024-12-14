@@ -1,3 +1,5 @@
+@use '@angular/material' as mat;
+
 :host {
   height: 100%;
   display: flex;
@@ -6,10 +8,19 @@
 
 mat-toolbar {
   gap: 8px;
-}
+  @include mat.form-field-density(-4);
 
-.toolbar-spacer {
-  flex: 1 1 auto;
+  & .app-title {
+    margin-right: 48px;
+  }
+
+  & mat-form-field {
+    width: 280px;
+  }
+
+  & .toolbar-spacer {
+    flex: 1 1 auto;
+  }
 }
 
 .content {

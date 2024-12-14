@@ -1,16 +1,19 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSelectModule } from '@angular/material/select';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { ImageRendererCanvasComponent } from './image-renderer-canvas/image-renderer-canvas.component';
 import { PyworkService, type GlyphGeometry } from './pywork.service';
+import { PRONUNCIATION_SYSTEMS } from './trunic-data';
 import { TrunicGlyphComponent } from './trunic-glyph/trunic-glyph.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [ImageRendererCanvasComponent, TrunicGlyphComponent, MatToolbarModule, MatIconModule, MatButtonModule, MatProgressBarModule],
+  imports: [ImageRendererCanvasComponent, TrunicGlyphComponent, MatToolbarModule, MatIconModule, MatButtonModule, MatProgressBarModule, MatFormFieldModule, MatSelectModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
   host: {
@@ -27,6 +30,9 @@ export class AppComponent {
   readonly recognizedGlyphs = signal<[GlyphGeometry, { strokes: number, origin: DOMPointReadOnly }[]] | undefined>(undefined);
   readonly dragActive = signal(false);
   cancelCurrentOcr?: () => Promise<void> = undefined;
+
+  readonly _PNS = PRONUNCIATION_SYSTEMS;
+  readonly pronctnSystem = signal(PRONUNCIATION_SYSTEMS[0]);
 
   constructor(private readonly pywork: PyworkService) {
   }

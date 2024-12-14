@@ -16,11 +16,19 @@
   <text [attr.x]="_g().glyph_template_shape[1]/2" [attr.y]="_g().glyph_template_origin[1]"
     [style.font-size.px]="_fontsize()">
     @if (_textFlip()) {
-    <tspan [attr.fill]="_textV() === '?' ? 'red' : undefined">{{ _textV() }}</tspan>
-    <tspan [attr.fill]="_textC() === '?' ? 'red' : undefined">{{ _textC() }}</tspan>
+    <ng-container [ngTemplateOutlet]="text_tspan" [ngTemplateOutletContext]="{t: _textV()}" />
+    <ng-container [ngTemplateOutlet]="text_tspan" [ngTemplateOutletContext]="{t: _textC()}" />
     } @else {
-    <tspan [attr.fill]="_textC() === '?' ? 'red' : undefined">{{ _textC() }}</tspan>
-    <tspan [attr.fill]="_textV() === '?' ? 'red' : undefined">{{ _textV() }}</tspan>
+    <ng-container [ngTemplateOutlet]="text_tspan" [ngTemplateOutletContext]="{t: _textC()}" />
+    <ng-container [ngTemplateOutlet]="text_tspan" [ngTemplateOutletContext]="{t: _textV()}" />
     }
   </text>
 </svg>
+
+<ng-template #text_tspan let-t="t">
+  @if (t === null) {
+  <svg:tspan fill="red">?</svg:tspan>
+  } @else {
+  <svg:tspan>{{ t }}</svg:tspan>
+  }
+</ng-template>

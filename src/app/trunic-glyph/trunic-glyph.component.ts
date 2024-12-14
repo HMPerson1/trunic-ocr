@@ -1,10 +1,12 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { GlyphGeometry } from '../pywork.service';
+import * as trunic_data from '../trunic-data';
 
 @Component({
   selector: 'app-trunic-glyph',
   standalone: true,
-  imports: [],
+  imports: [NgTemplateOutlet],
   templateUrl: './trunic-glyph.component.svg',
   styleUrl: './trunic-glyph.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -13,6 +15,7 @@ export class TrunicGlyphComponent {
   readonly geometry = input.required<GlyphGeometry>();
   readonly strokesPacked = input.required<number>();
   readonly renderScale = input.required<number>();
+  readonly pronctnSystem = input.required<trunic_data.PronunciationSystem>();
   readonly _g = this.geometry;
   readonly _transformStr = computed(() => `scale(${this.renderScale()})`);
   readonly _renderData = computed(() =>
@@ -21,109 +24,13 @@ export class TrunicGlyphComponent {
       .map(stroke => stroke.map(v => `${v[0][0]} ${v[0][1]} ${v[1][0]} ${v[1][1]}`))
   );
   readonly _fontsize = computed(() => (this._g().glyph_template_shape[1] - this._g().stroke_width) / 3);
-  readonly _textC = computed(() => CONSONANTS[this.strokesPacked() & 0x3F][0]);
-  readonly _textV = computed(() => VOWELS[(this.strokesPacked() >> 6) & 0x1F][0]);
+  readonly _textC = computed(() => {
+    const cnsnt_i = trunic_data.CNSNT_LUT[this.strokesPacked() & 0x3F];
+    return cnsnt_i === -128 ? "" : cnsnt_i < 0 ? null : this.pronctnSystem().consonants[cnsnt_i][0];
+  });
+  readonly _textV = computed(() => {
+    const vowel_i = trunic_data.VOWEL_LUT[(this.strokesPacked() >> 6) & 0x1F];
+    return vowel_i === -128 ? "" : vowel_i < 0 ? null : this.pronctnSystem().vowels[vowel_i][0];
+  });
   readonly _textFlip = computed(() => (this.strokesPacked() & (1 << 11)) !== 0);
 }
-
-const VOWELS: Array<[string, string[]]> = [
-  ['', []],
-  ['aɪ', []],
-  ['eɪ', []],
-  ['ə', ['ʌ']],
-  ['?', []],
-  ['?', []],
-  ['ɒ', ['ɑː']],
-  ['æ', []],
-  ['ɔɪ', []],
-  ['?', []],
-  ['?', []],
-  ['?', []],
-  ['ʊ', ['u']],
-  ['?', []],
-  ['?', []],
-  ['uː', ['u']],
-  ['aʊ', []],
-  ['?', []],
-  ['?', []],
-  ['?', []],
-  ['ɛər', ['ɛr', 'ær']],
-  ['?', []],
-  ['ɪər', ['ɪr']],
-  ['ʊər', ['ʊr', 'ɔːr']],
-  ['ɪ', ['i']],
-  ['?', []],
-  ['?', []],
-  ['ɒr', ['ɑːr']],
-  ['ɛ', ['e']],
-  ['ər', ['ʌr', 'ɜːr']],
-  ['iː', ['i']],
-  ['oʊ', []],
-];
-
-const CONSONANTS: Array<[string]> = [
-  [''],
-  ['?'],
-  ['?'],
-  ['?'],
-  ['?'],
-  ['w'],
-  ['?'],
-  ['?'],
-  ['?'],
-  ['?'],
-  ['dʒ'],
-  ['?'],
-  ['?'],
-  ['?'],
-  ['?'],
-  ['?'],
-  ['?'],
-  ['p'],
-  ['l'],
-  ['r'],
-  ['tʃ'],
-  ['t'],
-  ['j'],
-  ['θ'],
-  ['?'],
-  ['f'],
-  ['?'],
-  ['s'],
-  ['?'],
-  ['?'],
-  ['?'],
-  ['?'],
-  ['?'],
-  ['?'],
-  ['b'],
-  ['k'],
-  ['?'],
-  ['?'],
-  ['v'],
-  ['?'],
-  ['m'],
-  ['?'],
-  ['d'],
-  ['?'],
-  ['n'],
-  ['?'],
-  ['?'],
-  ['ʒ'],
-  ['?'],
-  ['ɡ'],
-  ['h'],
-  ['?'],
-  ['?'],
-  ['?'],
-  ['z'],
-  ['?'],
-  ['?'],
-  ['?'],
-  ['ð'],
-  ['?'],
-  ['?'],
-  ['ʃ'],
-  ['?'],
-  ['ŋ'],
-];

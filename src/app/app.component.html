@@ -1,5 +1,13 @@
 <mat-toolbar>
-  <span>Trunic OCR</span>
+  <span class="app-title">Trunic OCR</span>
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Pronouciation System</mat-label>
+    <mat-select [(value)]="pronctnSystem">
+      @for (sys of _PNS; track $index) {
+      <mat-option [value]="sys">{{ sys.name }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
   <span class="toolbar-spacer"></span>
   <button mat-icon-button><mat-icon>info</mat-icon></button>
 </mat-toolbar>
@@ -18,7 +26,7 @@
     @for (glyph of recognizedGlyphs[1]; track $index) {
     @let origin = transform.transformPoint(glyph.origin);
     <app-trunic-glyph [geometry]="geometry" [strokesPacked]="glyph.strokes" [renderScale]="transform.a"
-      [style.top.px]="origin.y" [style.left.px]="origin.x">
+      [pronctnSystem]="pronctnSystem()" [style.top.px]="origin.y" [style.left.px]="origin.x">
     </app-trunic-glyph>
     }
     }
