@@ -1,5 +1,5 @@
 svg {
-    transform-origin: 0 0;
+    display: block;
 }
 
 polyline,
@@ -9,7 +9,7 @@ circle {
     fill: transparent;
 }
 
-rect {
+.text-backing {
     fill: #000;
     opacity: .6;
 }
@@ -18,4 +18,14 @@ text {
     fill: #fff;
     text-anchor: middle;
     dominant-baseline: middle;
+}
+
+:host:hover {
+    & svg {
+        background: #000b;
+    }
+
+    & .text-backing {
+        opacity: .8;
+    }
 }

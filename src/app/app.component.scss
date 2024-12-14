@@ -80,4 +80,10 @@ mat-toolbar {
 
 app-trunic-glyph {
   position: absolute;
+  transform-origin: 0 0;
+  z-index: 0;
+
+  &:hover {
+    z-index: 1;
+  }
 }

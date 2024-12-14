@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" [attr.width]="_g().glyph_template_shape[1]"
-  [attr.height]="_g().glyph_template_shape[0]" [style.transform]="_transformStr()">
+  [attr.height]="_g().glyph_template_shape[0]">
   <g [style.stroke-width.px]="_g().stroke_width">
     @for (stroke of _renderData(); track $index) {
     @if (stroke.length === 0) {
@@ -11,7 +11,7 @@
     }
     }
   </g>
-  <rect [attr.x]="_g().stroke_width*1.5" [attr.y]="_g().glyph_template_origin[1] - _fontsize()*0.6"
+  <rect class="text-backing" [attr.x]="_g().stroke_width*1.5" [attr.y]="_g().glyph_template_origin[1] - _fontsize()*0.6"
     [attr.width]="_g().glyph_template_shape[1]-_g().stroke_width*3" [attr.height]="_fontsize()*1.2" />
   <text [attr.x]="_g().glyph_template_shape[1]/2" [attr.y]="_g().glyph_template_origin[1]"
     [style.font-size.px]="_fontsize()">

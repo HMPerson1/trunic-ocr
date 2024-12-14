@@ -14,10 +14,8 @@ import * as trunic_data from '../trunic-data';
 export class TrunicGlyphComponent {
   readonly geometry = input.required<GlyphGeometry>();
   readonly strokesPacked = input.required<number>();
-  readonly renderScale = input.required<number>();
   readonly pronctnSystem = input.required<trunic_data.PronunciationSystem>();
   readonly _g = this.geometry;
-  readonly _transformStr = computed(() => `scale(${this.renderScale()})`);
   readonly _renderData = computed(() =>
     this._g().all_lines
       .filter((_v, i) => i === 12 || ((this.strokesPacked() & (1 << i)) !== 0))
