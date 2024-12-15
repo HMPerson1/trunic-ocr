@@ -1,5 +1,6 @@
 import gc
 import math
+import typing
 from dataclasses import dataclass
 
 import cv2
@@ -7,7 +8,9 @@ import numpy as np
 import numpy.typing as npt
 
 type NDArray_u8 = npt.NDArray[np.uint8]
+type NDArray_i32 = npt.NDArray[np.int32]
 type NDArray_f32 = npt.NDArray[np.float32]
+type NDArray_f64 = npt.NDArray[np.float64]
 type SegCoordArrI = npt.NDArray[np.uint32]
 type SegCoordArrF = npt.NDArray[np.float64]
 
@@ -106,33 +109,39 @@ def oneshotRecognize(src_raw: NDArray_u8):
         dtype=np.int32,
     )
 
-    (
-        all_lines,
-        circle_center,
-        glyph_template,
-        glyph_template_mask,
-        glyph_template_base,
-    ) = make_template(
+    all_lines, circle_center = make_all_lines(
         stroke_width,
         grid1,
         grid2,
         offset_u,
         offset_l,
         glyph_width,
-        glyph_template_shape,
         glyph_template_origin,
     )
     del grid1
     del grid2
     del offset_u
     del offset_l
-    yield 13, dict(
+
+    glyph_geometry_pod = GlyphGeometry(
+        upscale=upscale,
         stroke_width=stroke_width,
+        glyph_width=glyph_width,
         glyph_template_shape=glyph_template_shape,
-        glyph_template_origin=tuple(map(int, glyph_template_origin)),
+        glyph_template_origin=glyph_template_origin,
         all_lines=all_lines,
         circle_center=circle_center,
+    ).to_pod()
+    del (
+        upscale,
+        stroke_width,
+        glyph_template_shape,
+        glyph_template_origin,
+        all_lines,
+        circle_center,
     )
+
+    yield 13, glyph_geometry_pod
 
     glyph_origins_raw = np.array(
         [
@@ -144,6 +153,18 @@ def oneshotRecognize(src_raw: NDArray_u8):
     )
     del baselines_spec
     del glyph_width
+
+    glyph_geometry = GlyphGeometry.from_pod(glyph_geometry_pod)
+
+    glyph_template, glyph_template_mask, glyph_template_base = make_template(
+        glyph_geometry
+    )
+
+    upscale = glyph_geometry.upscale
+    stroke_width = glyph_geometry.stroke_width
+    glyph_template_shape = glyph_geometry.glyph_template_shape
+    glyph_template_origin = glyph_geometry.glyph_template_origin
+    del glyph_geometry
 
     gc.collect()
     glyphs_strokes, glyphs_origins = yield from fit_glyphs(
@@ -704,16 +725,78 @@ def find_geometry(
     return grid1, grid2, offset_u, offset_l
 
 
-def make_template(
+LineSegmtSpec = tuple[tuple[float, float], tuple[float, float]]
+
+
+class GlyphGeometryPod(typing.TypedDict):
+    upscale: int
+    stroke_width: int
+    glyph_width: float
+    glyph_template_shape: tuple[int, int]
+    glyph_template_origin: tuple[int, int]
+    all_lines: list[list[LineSegmtSpec]]
+    circle_center: tuple[float, float]
+
+
+@dataclass
+class GlyphGeometry:
+    upscale: int
+    stroke_width: int
+    glyph_width: float
+    glyph_template_shape: tuple[int, int]
+    glyph_template_origin: npt.NDArray[np.int32]
+    all_lines: list[list[NDArray_f64]]
+    circle_center: NDArray_f64
+
+    def to_pod(self) -> GlyphGeometryPod:
+        return GlyphGeometryPod(
+            upscale=self.upscale,
+            stroke_width=self.stroke_width,
+            glyph_width=self.glyph_width,
+            glyph_template_shape=self.glyph_template_shape,
+            glyph_template_origin=tuple(map(int, self.glyph_template_origin)),
+            all_lines=[
+                [tuple(tuple(p) for p in l) for l in polyline]
+                for polyline in self.all_lines
+            ],
+            circle_center=tuple(self.circle_center),
+        )
+
+    @classmethod
+    def from_pod(cls, pod: GlyphGeometryPod):
+        return cls(
+            upscale=int(pod["upscale"]),
+            stroke_width=int(pod["stroke_width"]),
+            glyph_width=float(pod["glyph_width"]),
+            glyph_template_shape=coerce_pair(pod["glyph_template_shape"], int),
+            glyph_template_origin=np.array(
+                coerce_pair(pod["glyph_template_origin"], int), dtype=np.int32
+            ),
+            all_lines=[
+                [
+                    np.array(
+                        coerce_pair(l, lambda p: coerce_pair(p, float)),
+                        dtype=np.float64,
+                    )
+                    for l in polyline
+                ]
+                for polyline in pod["all_lines"]
+            ],
+            circle_center=np.array(
+                coerce_pair(pod["circle_center"], float), dtype=np.float64
+            ),
+        )
+
+
+def make_all_lines(
     stroke_width: int,
     grid1,
     grid2,
     offset_u,
     offset_l,
     glyph_width: float,
-    glyph_template_shape: tuple[float, float],
-    glyph_template_origin,
-):
+    glyph_template_origin: NDArray_i32,
+) -> tuple[list[list[NDArray_f64]], NDArray_f64]:
     pu00 = offset_u
     pu10 = pu00 + grid1
     pu01 = pu00 + grid2
@@ -741,24 +824,34 @@ def make_template(
         # baseline
         [[[0.0, 0.0], [glyph_width, 0]]],
     ]
-    glyph_template_uint8 = np.zeros((13, *glyph_template_shape), dtype=np.uint8)
-    for canvas, polyline in zip(glyph_template_uint8, all_lines):
+    circle_center = pl01 + [0, stroke_width]
+    return (
+        [
+            [np.array([(p + glyph_template_origin) for p in l]) for l in polyline]
+            for polyline in all_lines
+        ],
+        circle_center + glyph_template_origin,
+    )
+
+
+def make_template(g: GlyphGeometry):
+    glyph_template_uint8 = np.zeros((13, *g.glyph_template_shape), dtype=np.uint8)
+    for canvas, polyline in zip(glyph_template_uint8, g.all_lines):
         cv2.polylines(
             canvas,
-            [np.int32(2**16 * (o + glyph_template_origin)) for o in polyline],
+            [np.int32(2**16 * o) for o in polyline],
             False,
             255,
-            thickness=stroke_width,
+            thickness=g.stroke_width,
             lineType=cv2.LINE_AA,
             shift=16,
         )
-    circle_center = pl01 + [0, stroke_width]
     cv2.circle(
         glyph_template_uint8[-2],
-        np.int32(2**16 * (circle_center + glyph_template_origin)),
-        2**16 * (stroke_width - 1),
+        np.int32(2**16 * g.circle_center),
+        2**16 * (g.stroke_width - 1),
         255,
-        thickness=stroke_width - 1,
+        thickness=g.stroke_width - 1,
         lineType=cv2.LINE_AA,
         shift=16,
     )
@@ -766,30 +859,30 @@ def make_template(
     for canvas in glyph_template:
         cv2.GaussianBlur(canvas, (3, 3), 0, dst=canvas)
 
-    template_overlap_uint8 = np.zeros(glyph_template_shape, dtype=np.uint8)
+    template_overlap_uint8 = np.zeros(g.glyph_template_shape, dtype=np.uint8)
     cv2.polylines(
         template_overlap_uint8,
         [
-            np.int32(2**16 * (o + glyph_template_origin + [glyph_width, 0]))
-            for lines in all_lines
+            np.int32(2**16 * (o + [g.glyph_width, 0]))
+            for lines in g.all_lines
             for o in lines
         ],
         False,
         255,
-        thickness=stroke_width,
+        thickness=g.stroke_width,
         lineType=cv2.LINE_AA,
         shift=16,
     )
     cv2.polylines(
         template_overlap_uint8,
         [
-            np.int32(2**16 * (o + glyph_template_origin - [glyph_width, 0]))
-            for lines in all_lines
+            np.int32(2**16 * (o - [g.glyph_width, 0]))
+            for lines in g.all_lines
             for o in lines
         ],
         False,
         255,
-        thickness=stroke_width,
+        thickness=g.stroke_width,
         lineType=cv2.LINE_AA,
         shift=16,
     )
@@ -811,11 +904,6 @@ def make_template(
         return glyph_template_base
 
     return (
-        [
-            [[list(p + glyph_template_origin) for p in l] for l in ls]
-            for ls in all_lines
-        ],
-        list(circle_center + glyph_template_origin),
         glyph_template[:-1],
         glyph_template_mask[:-1],
         make_glyph_template_base(),
@@ -990,3 +1078,8 @@ def check_grid_fit(points, spacings):
     p = points.reshape(*points.shape, *((1,) * len(spacings.shape)))
     ft = np.sum(np.exp((2j * np.pi * f) * p), axis=0)
     return np.abs(ft) / points.size, np.angle(ft) * (spacings / (2 * np.pi))
+
+
+def coerce_pair[T, U](p: tuple[U, U], ty: typing.Callable[[U], T]) -> tuple[T, T]:
+    a, b = p
+    return (ty(a), ty(b))
