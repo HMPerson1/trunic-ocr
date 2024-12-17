@@ -109,6 +109,16 @@ def oneshotRecognize(src_raw: NDArray_u8):
         dtype=np.int32,
     )
 
+    glyph_origins_raw = np.array(
+        [
+            [round(bsln_spec.x + i * glyph_width), bsln_spec.y]
+            for bsln_spec in baselines_spec
+            for i in range(round(bsln_spec.length / glyph_width))
+        ],
+        dtype=np.int32,
+    )
+    del baselines_spec
+
     all_lines, circle_center = make_all_lines(
         stroke_width,
         grid1,
@@ -123,7 +133,7 @@ def oneshotRecognize(src_raw: NDArray_u8):
     del offset_u
     del offset_l
 
-    glyph_geometry_pod = GlyphGeometry(
+    glyph_geometry = GlyphGeometry(
         upscale=upscale,
         stroke_width=stroke_width,
         glyph_width=glyph_width,
@@ -131,9 +141,10 @@ def oneshotRecognize(src_raw: NDArray_u8):
         glyph_template_origin=glyph_template_origin,
         all_lines=all_lines,
         circle_center=circle_center,
-    ).to_pod()
+    )
     del (
         upscale,
+        glyph_width,
         stroke_width,
         glyph_template_shape,
         glyph_template_origin,
@@ -141,43 +152,50 @@ def oneshotRecognize(src_raw: NDArray_u8):
         circle_center,
     )
 
-    yield 13, glyph_geometry_pod
+    yield 13, glyph_geometry.to_pod()
 
-    glyph_origins_raw = np.array(
-        [
-            [round(bsln_spec.x + i * glyph_width), bsln_spec.y]
-            for bsln_spec in baselines_spec
-            for i in range(round(bsln_spec.length / glyph_width))
-        ],
-        dtype=np.int32,
-    )
-    del baselines_spec
-    del glyph_width
-
-    glyph_geometry = GlyphGeometry.from_pod(glyph_geometry_pod)
-
-    glyph_template, glyph_template_mask, glyph_template_base = make_template(
-        glyph_geometry
-    )
+    glyph_templates = make_templates(glyph_geometry)
 
     upscale = glyph_geometry.upscale
     stroke_width = glyph_geometry.stroke_width
     glyph_template_shape = glyph_geometry.glyph_template_shape
     glyph_template_origin = glyph_geometry.glyph_template_origin
-    del glyph_geometry
+
+    strokes_bordered = cv2.copyMakeBorder(
+        strokes_f,
+        stroke_width,
+        stroke_width * 3,
+        stroke_width,
+        stroke_width,
+        cv2.BORDER_CONSTANT,
+        value=0,
+    )
+    del strokes_f
+
+    # return (
+    #     strokes_bordered,
+    #     glyph_geometry,
+    #     glyph_templates,
+    #     glyph_origins_raw,
+    # )
 
     gc.collect()
-    glyphs_strokes, glyphs_origins = yield from fit_glyphs(
-        upscale,
-        stroke_width,
-        strokes_f,
-        glyph_template_shape,
-        glyph_template_origin,
-        glyph_template,
-        glyph_template_mask,
-        glyph_template_base,
-        glyph_origins_raw,
+    # glyphs_strokes, glyphs_origins = yield from fit_glyphs_batch(
+    #     upscale,
+    #     stroke_width,
+    #     strokes_bordered,
+    #     glyph_template_shape,
+    #     glyph_template_origin,
+    #     glyph_templates.glyphs,
+    #     glyph_templates.mask,
+    #     glyph_templates.base,
+    #     glyph_origins_raw,
+    # )
+    glyphs = list(
+        fit_glyphs(strokes_bordered, glyph_geometry, glyph_templates, glyph_origins_raw)
     )
+    glyphs_strokes = np.array([g[0] for g in glyphs])
+    glyphs_origins = np.array([g[1] for g in glyphs])
 
     consonants, vowels_circ = np.split(glyphs_strokes, [6], axis=1)
     glyphs_strokes_packed = np.concatenate(
@@ -190,7 +208,7 @@ def oneshotRecognize(src_raw: NDArray_u8):
 
     return (
         np.ascontiguousarray(glyphs_strokes_packed),
-        np.ascontiguousarray(glyphs_origins - glyph_template_origin),
+        np.ascontiguousarray(glyphs_origins),
     )
 
 
@@ -834,7 +852,14 @@ def make_all_lines(
     )
 
 
-def make_template(g: GlyphGeometry):
+@dataclass
+class GlyphTemplates:
+    glyphs: NDArray_f32
+    mask: npt.NDArray[np.bool_]
+    base: NDArray_f32
+
+
+def make_templates(g: GlyphGeometry) -> GlyphTemplates:
     glyph_template_uint8 = np.zeros((13, *g.glyph_template_shape), dtype=np.uint8)
     for canvas, polyline in zip(glyph_template_uint8, g.all_lines):
         cv2.polylines(
@@ -903,17 +928,116 @@ def make_template(g: GlyphGeometry):
         )
         return glyph_template_base
 
-    return (
-        glyph_template[:-1],
-        glyph_template_mask[:-1],
-        make_glyph_template_base(),
+    return GlyphTemplates(
+        glyphs=glyph_template[:-1].copy(),
+        mask=glyph_template_mask[:-1].copy(),
+        base=make_glyph_template_base(),
     )
 
 
+class RecognizedGlyphPod(typing.TypedDict):
+    origin: tuple[float, float]
+    strokes: int
+
+
 def fit_glyphs(
+    strokes_bordered: NDArray_f32,
+    glyph_geometry: GlyphGeometry,
+    glyph_templates: GlyphTemplates,
+    glyph_origins_raw: NDArray_i32 | list[int],
+    slop: int = 2,
+):
+    upscale = glyph_geometry.upscale
+    stroke_width = glyph_geometry.stroke_width
+    glyph_template_shape = glyph_geometry.glyph_template_shape
+    glyph_template = glyph_templates.glyphs
+    glyph_template_mask = glyph_templates.mask
+    glyph_template_base = glyph_templates.base
+
+    glyph_origins_raw = (
+        np.asarray(glyph_origins_raw, dtype=np.int32).reshape(-1, 2)
+        - glyph_geometry.glyph_template_origin
+    )
+    all_template_offsets = (
+        np.dstack(np.mgrid[: upscale * slop + 1, : upscale * slop + 1]).reshape(-1, 2)
+        - (upscale * slop + 1) // 2
+    )
+
+    for g in glyph_origins_raw:
+        yield fit_glyph_one(
+            strokes_bordered,
+            stroke_width,
+            glyph_template_shape,
+            glyph_template,
+            glyph_template_mask,
+            glyph_template_base,
+            all_template_offsets,
+            g,
+        )
+
+
+def fit_glyph_one(
+    strokes_bordered: NDArray_f32,
+    border_offset,
+    glyph_template_shape: tuple[float, float],
+    glyph_template,
+    glyph_template_mask,
+    glyph_template_base,
+    all_template_offsets: NDArray_i32,
+    glyph_origin_raw: NDArray_i32,
+) -> tuple[NDArray_u8, NDArray_i32]:
+    def rect_to_slice(p, s):
+        return (slice(p[1], p[1] + s[0]), slice(p[0], p[0] + s[1]))
+
+    def gen_next_templates(strokes, template):
+        stroke_is = np.nonzero(~strokes)[0]
+        n = len(stroke_is)
+        next_strokes = np.broadcast_to(strokes, (n, *strokes.shape)).copy()
+        next_templates = np.broadcast_to(template, (n, *template.shape)).copy()
+        next_strokes[np.indices([n]), stroke_is] = True
+        m = glyph_template_mask[stroke_is]
+        next_templates[m] = np.fmax(next_templates[m], glyph_template[stroke_is][m])
+        return next_strokes, next_templates
+
+    glyph_origin_raw_bo = glyph_origin_raw + border_offset
+    glyph_all_offsets = [
+        strokes_bordered[rect_to_slice(glyph_origin_raw_bo + o, glyph_template_shape)]
+        for o in all_template_offsets
+    ]
+    glyph_all_offsets = np.array(glyph_all_offsets)
+
+    def check_templates(templates):
+        tmpl_max0 = np.fmax(templates, 0)
+        best_offsets_i = np.argmax(
+            np.einsum("ikl,jkl->ji", glyph_all_offsets, tmpl_max0), axis=1
+        )
+        best_offsets = all_template_offsets[best_offsets_i]
+        glyphs = glyph_all_offsets[best_offsets_i]
+        return (
+            np.einsum("ijk,ijk->i", glyphs, templates) / np.sum(tmpl_max0, axis=(1, 2)),
+            best_offsets,
+        )
+
+    cur_strokes = np.zeros(len(glyph_template), dtype=np.bool_)
+    cur_template = glyph_template_base.copy()
+    cur_fit, cur_offset = check_templates(cur_template[np.newaxis, ...])
+    for _i in range(len(glyph_template)):
+        next_strokes, next_templates = gen_next_templates(cur_strokes, cur_template)
+        fits, offsets = check_templates(next_templates)
+        next_i = np.argmax(fits)
+        if fits[next_i] < cur_fit:
+            break
+        cur_strokes = next_strokes[next_i]
+        cur_template = next_templates[next_i]
+        cur_fit = fits[next_i]
+        cur_offset = offsets[next_i]
+    return cur_strokes, glyph_origin_raw + cur_offset
+
+
+def fit_glyphs_batch(
     upscale: int,
     stroke_width: int,
-    strokes_f: NDArray_f32,
+    strokes_bordered: NDArray_f32,
     glyph_template_shape: tuple[float, float],
     glyph_template_origin,
     glyph_template,
@@ -973,16 +1097,6 @@ def fit_glyphs(
             / np.sum(tmpl_dt_max0, axis=(-2, -1)),
             best_offsets,
         )
-
-    strokes_bordered = cv2.copyMakeBorder(
-        strokes_f,
-        stroke_width,
-        stroke_width,
-        stroke_width,
-        stroke_width,
-        cv2.BORDER_CONSTANT,
-        value=0,
-    )
 
     def glyph_slice_par(offsets):
         offsets = offsets + [stroke_width, stroke_width]

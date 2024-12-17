@@ -114,7 +114,9 @@ declare const tag_decodedImage: unique symbol;
 export type PyDecodedImageRef = PyWorkRef & { [tag_decodedImage]: null };
 
 export type GlyphGeometry = {
+  upscale: number,
   stroke_width: number,
+  glyph_width: number,
   glyph_template_shape: [number, number],
   glyph_template_origin: [number, number],
   all_lines: Array<Array<[[number, number], [number, number]]>>,
