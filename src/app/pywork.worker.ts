@@ -79,9 +79,9 @@ onmessage = async ({ data }: { data: PyWorkRequest }) => {
       const [py, pypkg] = await init;
       const interruptedToken = Symbol();
       try {
-        const [respData, transfers] = await impl_oneshotRecognize(py, pypkg, data.data as any, mkPostProgress(data.id, interruptedToken));
-        const msg: PyWorkResponse = { type: 'r', id: data.id, data: respData };
-        postMessage(msg, transfers);
+        await impl_oneshotRecognize(py, pypkg, data.data as any, mkPostProgress(data.id, interruptedToken));
+        const msg: PyWorkResponse = { type: 'r', id: data.id, data: undefined };
+        postMessage(msg);
       } catch (e) {
         if (Object.is(interruptedToken, e)) {
           const msg: PyWorkError = { type: 'e', id: data.id, data: undefined };
@@ -114,45 +114,58 @@ onmessage = async ({ data }: { data: PyWorkRequest }) => {
   }
 }
 
-async function impl_oneshotRecognize(_py: PyodideInterface, pypkg: any, data: PyWorkRef, postProgress: PostProgressFn<[number, any, number]>): Promise<[any, Transferable[]]> {
+async function impl_oneshotRecognize(_py: PyodideInterface, pypkg: any, data: PyWorkRef, postProgress: PostProgressFn<[number, any, number]>) {
   const perfTiming_start = performance.now();
   postProgress([0, undefined, performance.now() - perfTiming_start], { alsoYield: false });
 
-  const pyGen: PyGenerator & PyIterator = pypkg.oneshotRecognize(proxyStore.get(data));
-  try {
-    for (let i = 1; i <= 12; i++) {
-      const iterRes = pyGen.next();
-      if (!(!iterRes.done && iterRes.value === i)) throw new Error("bad py yield");
-      await postProgress([i / 26, undefined, performance.now() - perfTiming_start]);
-    }
-
-    const iterRes13: IteratorResult<PyProxy> = pyGen.next();
-    if (iterRes13.done) throw new Error("bad py yield");
-    const [pyYieldI, geomData] = iterRes13.value.toJs({ create_pyproxies: false, dict_converter: Object.fromEntries });
-    iterRes13.value.destroy();
-    if (!(pyYieldI === 13)) throw new Error("bad py yield");
-    await postProgress([0.5, geomData, performance.now() - perfTiming_start]);
-
-    const pyRet = await (async () => {
-      while (true) {
-        const iterRes: IteratorResult<number, PyProxy> = pyGen.next();
-        if (iterRes.done) return iterRes.value;
-        await postProgress([0.5 + (iterRes.value + 1) / 24, undefined, performance.now() - perfTiming_start]);
+  const [strokesPx, geomPx, tmplPx, originsPx] = await (async () => {
+    const pyGen: PyGenerator & PyIterator = pypkg.findGlyphs(proxyStore.get(data));
+    try {
+      for (let i = 1; i <= 12; i++) {
+        const iterRes = pyGen.next();
+        if (!(!iterRes.done && iterRes.value === i)) throw new Error("bad py yield");
+        await postProgress([i / 26, undefined, performance.now() - perfTiming_start]);
       }
-    })();
 
-    const [glyphStrokesPy, glyphOriginsPy]: [PyBuffer, PyBuffer] = pyRet.toJs({ depth: 1 });
-    pyRet.destroy();
-    const glyphStrokes = convert2dTypedArray(glyphStrokesPy, Uint8Array);
-    const glyphOrigins = convert2dTypedArray(glyphOriginsPy, Int32Array);
-    if (!(glyphStrokes.length === glyphOrigins.length)) throw new Error("bad py buffer");
+      const iterRet: IteratorResult<any, PyProxy> = pyGen.next();
+      if (!iterRet.done) throw new Error("bad py yield");
+      const [strokesPx, geomPx, tmplPx, originsPx] = iterRet.value.toJs({ depth: 1 });
+      iterRet.value.destroy();
+      return [strokesPx, geomPx, tmplPx, originsPx];
+    } finally {
+      pyGen.return(undefined);
+      pyGen.destroy();
+    }
+  })();
 
-    postProgress([1, undefined, performance.now() - perfTiming_start], { alsoYield: false });
-    return [[geomData, glyphStrokes, glyphOrigins], [glyphStrokes.buffer, glyphOrigins.buffer]]
-  } finally {
-    pyGen.return(undefined);
-    pyGen.destroy();
+  const geomPodPx = geomPx.to_pod();
+  const geomData = geomPodPx.toJs({ create_pyproxies: false, dict_converter: Object.fromEntries });
+  geomPodPx.destroy();
+  await postProgress([0.5, { t: 0, v: geomData }, performance.now() - perfTiming_start]);
+
+  {
+    const pyGen: PyGenerator & PyIterator = pypkg.fitGlyphs(strokesPx, geomPx, tmplPx, originsPx);
+    try {
+      const glyphsCount = originsPx.length;
+      originsPx.destroy();
+      for (let i = 0; i < glyphsCount; i++) {
+        const iterRes: IteratorResult<PyProxy> = pyGen.next();
+        if (iterRes.done) throw new Error("bad py yield");
+        const glyph = iterRes.value.toJs({ create_pyproxies: false, dict_converter: Object.fromEntries });
+        iterRes.value.destroy();
+        await postProgress([0.5 + (i + 1) / (2 * glyphsCount), { t: 1, v: glyph }, performance.now() - perfTiming_start]);
+      }
+      const iterRet = pyGen.next();
+      if (!(iterRet.done && iterRet.value === undefined)) throw new Error("bad py yield");
+    } finally {
+      pyGen.return(undefined);
+      pyGen.destroy();
+    }
   }
+
+  strokesPx.destroy();
+  geomPx.destroy();
+  tmplPx.destroy();
 }
 
 /** destroys `pypx` */

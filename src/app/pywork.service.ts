@@ -79,16 +79,17 @@ export class PyworkService {
     return promise as Promise<PyDecodedImageRef>;
   }
 
-  oneshotRecognize(imgRef: PyDecodedImageRef): [Promise<[GlyphGeometry, Uint8Array, Float64Array]>, Observable<number>, () => Promise<void>] {
+  oneshotRecognize(imgRef: PyDecodedImageRef): [Observable<[number, { t: 0, v: GlyphGeometry } | { t: 1, v: RecognizedGlyph } | undefined]>, () => Promise<void>] {
     const reqId = genReqId();
-    const progOut = new Subject<number>()
+    const progOut = new Subject<any>();
     const { promise, resolve, reject } = Promise.withResolvers();
-    promise.finally(() => progOut.complete()); // don't also error the observable
-    this.#activeRequests.set(reqId, { resolve, progress: v => progOut.next((v as any)[0]), reject });
+    promise.then(() => progOut.complete());
+    promise.catch(e => progOut.error(e));
+    this.#activeRequests.set(reqId, { resolve, progress: v => progOut.next((v as any)), reject });
     const msg: PyWorkRequest = { id: reqId, name: 'oneshotRecognize', data: imgRef };
     this.worker.postMessage(msg);
     const cancel = async () => { await this.interrupt(reqId); try { await promise; } catch { } }
-    return [promise as Promise<[GlyphGeometry, Uint8Array, Float64Array]>, progOut.asObservable(), cancel];
+    return [progOut.asObservable(), cancel];
   }
 
   destroy(imgRef: PyDecodedImageRef): Promise<void> {
@@ -121,6 +122,10 @@ export type GlyphGeometry = {
   glyph_template_origin: [number, number],
   all_lines: Array<Array<[[number, number], [number, number]]>>,
   circle_center: [number, number],
+}
+export type RecognizedGlyph = {
+  origin: [number, number],
+  strokes: [number, number],
 }
 
 type RequestEntry = { resolve: (d: unknown) => void, progress?: (d: unknown) => void, reject?: (d: unknown) => void };

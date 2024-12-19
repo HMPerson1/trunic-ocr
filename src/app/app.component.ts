@@ -87,27 +87,40 @@ export class AppComponent {
         return;
       }
 
-      const [ocrDone, ocrProgress, cancel] = this.pywork.oneshotRecognize(pyImage);
-      const ocrProgressSub = ocrProgress.subscribe(v => this.ocrProgress.set(v * 100));
-      const ocrDoneThen = ocrDone.then(([glyphGeometry, strokesPackedFlat, originsFlat]) => {
-        this.recognizedGlyphs.set([glyphGeometry,
-          Array.from({ length: originsFlat.length / 2 }, (_v, i) => ({
-            origin: new DOMPointReadOnly(originsFlat[i * 2], originsFlat[i * 2 + 1]),
-            strokes: (strokesPackedFlat[i * 2 + 1] << 6) | strokesPackedFlat[i * 2]
-          }))
-        ]);
+      const [ocrProgress, cancel] = this.pywork.oneshotRecognize(pyImage);
+      const ocrDone = Promise.withResolvers<void>();
+      const ocrProgressSub = ocrProgress.subscribe({
+        next: ([p, v]) => {
+          this.ocrProgress.set(p * 100);
+          if (v === undefined) return;
+          switch (v.t) {
+            case 0:
+              this.recognizedGlyphs.set([v.v, []]);
+              break;
+            case 1:
+              this.recognizedGlyphs.update(prev => prev == null ? prev : [prev[0], [...prev[1], {
+                origin: new DOMPointReadOnly(...v.v.origin),
+                strokes: (v.v.strokes[1] << 8) | v.v.strokes[0]
+              }]]);
+              break;
+            default:
+              const _a: never = v;
+          }
+        },
+        error: ocrDone.reject,
+        complete: ocrDone.resolve,
       });
 
       let wasCancelled = false;
       const thisCancelCurrentOcr = async () => {
         wasCancelled = true;
         await cancel();
-        try { await ocrDoneThen; } catch { }
+        try { await ocrDone.promise; } catch { }
       };
       this.cancelCurrentOcr = thisCancelCurrentOcr;
 
       try {
-        await ocrDoneThen;
+        await ocrDone.promise;
       } catch (e) {
         if (!wasCancelled) throw e;
       } finally {
