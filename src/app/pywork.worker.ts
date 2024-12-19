@@ -181,17 +181,21 @@ function convert2dTypedArray<T extends TypedArray>(pypx: PyBuffer, ty: new (t: T
 type PostProgressFn<T = unknown> =
   <const Opts extends { alsoYield?: boolean }>(progress: T, opts?: Opts)
     => Opts['alsoYield'] extends false ? undefined : Promise<undefined>;
-const mkPostProgress = (id: number, interruptedToken: unknown): PostProgressFn => ((data: unknown, { alsoYield = true } = {}) => {
-  const pmsg: PyWorkProgress = { type: 'p', id, data };
-  postMessage(pmsg);
-  if (alsoYield) {
-    return (async () => {
-      await new Promise(resolve => setTimeout(resolve));
-      if (pendingInterrupts.delete(id)) throw interruptedToken;
-    })();
-  }
-  return;
-}) as any;
+const mkPostProgress = (id: number, interruptedToken: unknown): PostProgressFn => {
+  let nextMacrotask = new Promise(resolve => setTimeout(resolve));
+  return ((data: unknown, { alsoYield = true } = {}) => {
+    const pmsg: PyWorkProgress = { type: 'p', id, data };
+    postMessage(pmsg);
+    if (alsoYield) {
+      return (async () => {
+        await nextMacrotask;
+        if (pendingInterrupts.delete(id)) throw interruptedToken;
+        nextMacrotask = new Promise(resolve => setTimeout(resolve));
+      })();
+    }
+    return;
+  }) as any;
+};
 
 function isLittleEndian(): boolean {
   return new Uint8Array(Uint16Array.of(1).buffer)[0] === 1;
