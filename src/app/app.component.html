@@ -22,14 +22,12 @@
       #imgDisplay="app-image-renderer-canvas"></canvas>
     @if (recognizedGlyphs(); as recognizedGlyphs) {
     @let geometry = recognizedGlyphs[0];
-    <div class="glyphs-container">
-      <div class="glyphs-transformer" [style.transform]="imgDisplay.imgTransform().scale(1/geometry.upscale)">
-        @for (glyph of recognizedGlyphs[1]; track $index) {
-        <app-trunic-glyph [geometry]="geometry" [pronctnSystem]="pronctnSystem()" [strokesPacked]="glyph.strokes"
-          [style.top.px]="glyph.origin.y" [style.left.px]="glyph.origin.x">
-        </app-trunic-glyph>
-        }
-      </div>
+    <div class="glyphs-container" [style.transform]="imgDisplay.imgTransform().scale(1/geometry.upscale)">
+      @for (glyph of recognizedGlyphs[1]; track $index) {
+      <app-trunic-glyph [geometry]="geometry" [pronctnSystem]="pronctnSystem()" [strokesPacked]="glyph.strokes"
+        [style.top.px]="glyph.origin[1]" [style.left.px]="glyph.origin[0]">
+      </app-trunic-glyph>
+      }
     </div>
     }
     } @else {

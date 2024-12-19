@@ -27,7 +27,7 @@ export class AppComponent {
   readonly hasInputImage = signal(false);
   readonly imageRenderable = signal<ImageBitmap | undefined>(undefined);
   readonly ocrProgress = signal<undefined | number>(undefined);
-  readonly recognizedGlyphs = signal<[GlyphGeometry, { strokes: number, origin: DOMPointReadOnly }[]] | undefined>(undefined);
+  readonly recognizedGlyphs = signal<[GlyphGeometry, { strokes: number, origin: [number, number] }[]] | undefined>(undefined);
   readonly dragActive = signal(false);
   cancelCurrentOcr?: () => Promise<void> = undefined;
 
@@ -99,7 +99,7 @@ export class AppComponent {
               break;
             case 1:
               this.recognizedGlyphs.update(prev => prev == null ? prev : [prev[0], [...prev[1], {
-                origin: new DOMPointReadOnly(...v.v.origin),
+                origin: v.v.origin,
                 strokes: (v.v.strokes[1] << 8) | v.v.strokes[0]
               }]]);
               break;
