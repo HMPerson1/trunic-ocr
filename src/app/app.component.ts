@@ -1,3 +1,5 @@
+import { Overlay, type OverlayRef } from '@angular/cdk/overlay';
+import { ComponentPortal } from '@angular/cdk/portal';
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -8,6 +10,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { ImageRendererCanvasComponent } from './image-renderer-canvas/image-renderer-canvas.component';
 import { PyworkService, type GlyphGeometry } from './pywork.service';
 import { PRONUNCIATION_SYSTEMS } from './trunic-data';
+import { TrunicGlyphDetailComponent } from './trunic-glyph-detail/trunic-glyph-detail.component';
 import { TrunicGlyphComponent } from './trunic-glyph/trunic-glyph.component';
 
 @Component({
@@ -34,7 +37,7 @@ export class AppComponent {
   readonly _PNS = PRONUNCIATION_SYSTEMS;
   readonly pronctnSystem = signal(PRONUNCIATION_SYSTEMS[0]);
 
-  constructor(private readonly pywork: PyworkService) {
+  constructor(private readonly pywork: PyworkService, private readonly cdkOverlay: Overlay) {
   }
 
   async handleData(data: DataTransfer) {
@@ -162,6 +165,30 @@ export class AppComponent {
   }
   windowDrop(event: DragEvent) {
     event.preventDefault();
+  }
+
+  currentOverlay: [EventTarget, OverlayRef] | undefined = undefined;
+
+  onGlyphToggle(event: Event, glyphIndex: number) {
+    const glyphs = this.recognizedGlyphs();
+    if (glyphs !== undefined && event.target != null && (event as ToggleEvent).newState === 'open') {
+      this.currentOverlay?.[1].dispose();
+      const overlayRef = this.cdkOverlay.create({
+        positionStrategy: this.cdkOverlay.position()
+          .flexibleConnectedTo(event.target as Element)
+          .withPositions([
+            { originX: 'center', originY: 'bottom', overlayX: 'center', overlayY: 'top' },
+            { originX: 'center', originY: 'top', overlayX: 'center', overlayY: 'bottom' },
+          ])
+          .withFlexibleDimensions(false),
+      });
+      const compRef = overlayRef.attach(new ComponentPortal(TrunicGlyphDetailComponent));
+      compRef.setInput('strokesPacked', glyphs[1][glyphIndex].strokes);
+      compRef.setInput('pronctnSystem', this.pronctnSystem());
+      this.currentOverlay = [event.target, overlayRef];
+    } else if (this.currentOverlay && event.target === this.currentOverlay[0]) {
+      this.currentOverlay[1].dispose();
+    }
   }
 }
 

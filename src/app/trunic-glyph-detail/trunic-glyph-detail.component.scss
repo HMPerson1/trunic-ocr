@@ -1,0 +1,24 @@
+mat-card-content {
+    display: grid;
+    grid: 1fr / auto-flow 1fr;
+    gap: 8px;
+}
+
+h3 {
+    text-align: center;
+    text-wrap: nowrap;
+}
+
+.error {
+    color: #f00;
+}
+
+ul {
+    padding-inline: 1.5em;
+}
+
+mark {
+    background-color: inherit;
+    color: #fc0;
+    font-weight: 500;
+}

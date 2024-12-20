@@ -1,0 +1,51 @@
+<mat-card>
+    <mat-card-content>
+        @for (data of _data(); track $index) {
+        @if (data !== undefined) {
+        <div>
+            @if (data === '???') {
+            <h3 class="error">???</h3>
+            } @else {
+            <h3>
+                @for(sym of data[0]; track $index) {
+                @if ($index > 0) {
+                <span>,&ngsp;</span>
+                }
+                <span>{{ pronctnSystem().delimiter }}{{ sym }}{{ pronctnSystem().delimiter }}</span>
+                }
+            </h3>
+            <ng-container *ngTemplateOutlet="wordlist; context: {wordlist: data[1]}" />
+            }
+        </div>
+        }
+        }
+    </mat-card-content>
+</mat-card>
+
+<ng-template #wordlist let-wordlist="wordlist">
+    <ul>
+        @for (words of wordlist; track $index) {
+        <li>
+            <ng-container *ngTemplateOutlet="mword; context: {word: words[0]}" />
+            @if (words.length > 1) {
+            &ngsp;
+            <em>
+                <span>(not&ngsp;</span>
+                <ng-container *ngTemplateOutlet="mword; context: {word: words[1]}" />
+                <span>)</span>
+            </em>
+            }
+        </li>
+        }
+    </ul>
+</ng-template>
+
+<ng-template #mword let-word="word">
+    @for (chars of word; track $index) {
+    @if ($index % 2 === 0) {
+    <span>{{ chars }}</span>
+    } @else {
+    <mark>{{ chars }}</mark>
+    }
+    }
+</ng-template>

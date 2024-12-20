@@ -82,13 +82,26 @@ mat-toolbar {
   position: absolute;
   inset: 0;
   transform-origin: 0 0;
-}
 
-app-trunic-glyph {
-  position: absolute;
-  z-index: auto;
+  & details {
+    position: absolute;
+    z-index: auto;
 
-  &:hover {
-    z-index: 2;
+    &:hover {
+      z-index: 2;
+    }
+
+    &>summary {
+      display: block;
+      cursor: pointer;
+    }
+
+    &[open] {
+      z-index: 1;
+
+      &>summary {
+        background: #000;
+      }
+    }
   }
 }
