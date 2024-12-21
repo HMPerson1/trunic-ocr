@@ -49,6 +49,7 @@ export class AppComponent {
     this.imageRenderable.set(undefined);
     this.ocrProgress.set(undefined);
     this.recognizedGlyphs.set(undefined);
+    this.currentOverlay?.[1].dispose();
 
     let resolveCancel: ((v: undefined) => void) | undefined;
     const lastCancelCurrentOcr = this.cancelCurrentOcr;
