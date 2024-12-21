@@ -1,12 +1,9 @@
-svg {
+:host {
     display: block;
 }
 
-polyline,
-circle {
-    stroke: #0f0;
-    stroke-linecap: round;
-    fill: transparent;
+app-trunic-glyph-image {
+    color: #0f0;
 }
 
 .ptext-align {
@@ -36,9 +33,7 @@ circle {
 }
 
 :host:hover {
-    & svg {
-        background: #000b;
-    }
+    background: #000b;
 
     & .ptext {
         background: #000b;

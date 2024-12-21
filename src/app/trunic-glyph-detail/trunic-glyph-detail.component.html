@@ -1,22 +1,22 @@
 <mat-card>
     <mat-card-content>
         @for (data of _data(); track $index) {
-        @if (data !== undefined) {
-        <div>
-            @if (data === '???') {
-            <h3 class="error">???</h3>
-            } @else {
-            <h3>
-                @for(sym of data[0]; track $index) {
-                @if ($index > 0) {
-                <span>,&ngsp;</span>
-                }
-                <span>{{ pronctnSystem().delimiter }}{{ sym }}{{ pronctnSystem().delimiter }}</span>
-                }
-            </h3>
-            <ng-container *ngTemplateOutlet="wordlist; context: {wordlist: data[1]}" />
+        @if ($index > 0) {
+        <div class="glyph-plus mat-display-small">+</div>
+        }
+        <app-trunic-glyph-image class="glyph-image" [geometry]="_DEFAULT_GLYPH_GEOMETRY" [strokesPacked]="data[0]" />
+        @if (data[1] === '???') {
+        <h3 class="error">???</h3>
+        } @else {
+        <h3>
+            @for(sym of data[1]; track $index) {
+            @if ($index > 0) {
+            <span>,&ngsp;</span>
             }
-        </div>
+            <span>{{ pronctnSystem().delimiter }}{{ sym }}{{ pronctnSystem().delimiter }}</span>
+            }
+        </h3>
+        <ng-container *ngTemplateOutlet="wordlist; context: {wordlist: data[2]}" />
         }
         }
     </mat-card-content>

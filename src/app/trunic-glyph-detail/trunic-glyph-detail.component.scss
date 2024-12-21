@@ -1,12 +1,37 @@
-mat-card-content {
-    display: grid;
-    grid: 1fr / auto-flow 1fr;
-    gap: 8px;
+:host {
+    text-wrap: nowrap;
 }
 
-h3 {
-    text-align: center;
-    text-wrap: nowrap;
+mat-card-content {
+    display: grid;
+    grid: auto auto auto / auto-flow 1fr auto;
+    gap: 8px 0px;
+
+    * {
+        margin: 0;
+    }
+
+    &>.glyph-image {
+        grid-row: 1;
+        place-self: center;
+        padding-inline: 8px;
+    }
+
+    &>div.glyph-plus {
+        grid-row: 1;
+        place-self: center;
+        margin-top: -13px;
+        /* 13 == glyph_template_shape[0] / 2 - glyph_template_origin[1] + stroke_width */
+    }
+
+    &>h3 {
+        grid-row: 2;
+        text-align: center;
+    }
+
+    &>ul {
+        grid-row: 3;
+    }
 }
 
 .error {

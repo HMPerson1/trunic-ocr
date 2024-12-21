@@ -1,0 +1,10 @@
+svg {
+    display: block;
+}
+
+polyline,
+circle {
+    stroke: currentColor;
+    stroke-linecap: round;
+    fill: transparent;
+}
