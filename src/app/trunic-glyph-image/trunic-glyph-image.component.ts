@@ -3,7 +3,6 @@ import type { GlyphGeometry } from '../pywork.service';
 
 @Component({
   selector: 'app-trunic-glyph-image',
-  standalone: true,
   imports: [],
   templateUrl: './trunic-glyph-image.component.html',
   styleUrl: './trunic-glyph-image.component.scss'

@@ -1,3 +1,5 @@
+@use '@angular/material' as mat;
+
 :host {
     text-wrap: nowrap;
 }
@@ -17,16 +19,23 @@ mat-card-content {
         padding-inline: 8px;
     }
 
-    &>div.glyph-plus {
+    &>.glyph-plus {
         grid-row: 1;
-        place-self: center;
-        margin-top: -13px;
-        /* 13 == glyph_template_shape[0] / 2 - glyph_template_origin[1] + stroke_width */
+        translate: 0 calc(49px - 50%);
+        /* 49 == glyph_template_origin[1] */
+        font-weight: 700;
     }
 
     &>h3 {
         grid-row: 2;
         text-align: center;
+
+        @include mat.theme((typography: 'Noto Sans'));
+
+        & {
+            font: var(--mat-sys-display-small);
+            letter-spacing: var(--mat-sys-display-small-tracking);
+        }
     }
 
     &>ul {
@@ -40,10 +49,12 @@ mat-card-content {
 
 ul {
     padding-inline: 1.5em;
+    font: var(--mat-sys-body-large);
+    letter-spacing: var(--mat-sys-body-large-tracking);
 }
 
 mark {
     background-color: inherit;
     color: #fc0;
-    font-weight: 500;
+    font-weight: 700;
 }

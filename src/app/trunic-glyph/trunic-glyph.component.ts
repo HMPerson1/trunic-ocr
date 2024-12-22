@@ -6,7 +6,6 @@ import { TrunicGlyphImageComponent } from "../trunic-glyph-image/trunic-glyph-im
 
 @Component({
   selector: 'app-trunic-glyph',
-  standalone: true,
   imports: [NgTemplateOutlet, TrunicGlyphImageComponent],
   templateUrl: './trunic-glyph.component.html',
   styleUrl: './trunic-glyph.component.scss',

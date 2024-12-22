@@ -2,7 +2,7 @@
     <mat-card-content>
         @for (data of _data(); track $index) {
         @if ($index > 0) {
-        <div class="glyph-plus mat-display-small">+</div>
+        <mat-icon class="glyph-plus">add</mat-icon>
         }
         <app-trunic-glyph-image class="glyph-image" [geometry]="_DEFAULT_GLYPH_GEOMETRY" [strokesPacked]="data[0]" />
         @if (data[1] === '???') {

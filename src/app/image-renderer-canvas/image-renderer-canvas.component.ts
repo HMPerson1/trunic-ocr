@@ -3,7 +3,6 @@ import { DestroyRef, Directive, ElementRef, computed, effect, input, signal } fr
 @Directive({
   selector: 'canvas[app-image-renderer-canvas]',
   exportAs: 'app-image-renderer-canvas',
-  standalone: true
 })
 export class ImageRendererCanvasComponent {
   readonly data = input.required<ImageBitmap>();

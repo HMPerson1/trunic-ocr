@@ -1,3 +1,5 @@
+@use '@angular/material' as mat;
+
 :host {
     display: block;
 }
@@ -23,9 +25,12 @@ app-trunic-glyph-image {
     padding: .25em;
     background: #0009;
 
-    /* revert material typography styles that don't work well with explicit font sizes */
-    line-height: initial;
-    letter-spacing: initial;
+    @include mat.theme((typography: 'Noto Sans'));
+
+    & {
+        font-family: var(--mat-sys-body-large-font);
+        font-weight: var(--mat-sys-body-large-weight);
+    }
 }
 
 .ptext-error {

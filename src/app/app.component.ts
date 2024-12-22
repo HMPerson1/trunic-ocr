@@ -15,7 +15,6 @@ import { TrunicGlyphComponent } from './trunic-glyph/trunic-glyph.component';
 
 @Component({
   selector: 'app-root',
-  standalone: true,
   imports: [ImageRendererCanvasComponent, TrunicGlyphComponent, MatToolbarModule, MatIconModule, MatButtonModule, MatProgressBarModule, MatFormFieldModule, MatSelectModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
