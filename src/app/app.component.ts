@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatToolbarModule } from '@angular/material/toolbar';
+import { fileOpen } from 'browser-fs-access';
 import { ImageRendererCanvasComponent } from './image-renderer-canvas/image-renderer-canvas.component';
 import { PyworkService, type GlyphGeometry } from './pywork.service';
 import { PRONUNCIATION_SYSTEMS } from './trunic-data';
@@ -44,6 +45,10 @@ export class AppComponent {
     if (blob === undefined) {
       throw new Error('no image data from drop or paste event');
     }
+    this.startOcr(blob);
+  }
+
+  async startOcr(blob: Blob) {
     this.hasInputImage.set(true);
     this.imageRenderable.set(undefined);
     this.ocrProgress.set(undefined);
@@ -157,6 +162,17 @@ export class AppComponent {
     if (dt == null) return;
     event.preventDefault();
     this.handleData(dt);
+  }
+
+  async browseImage() {
+    try {
+      const fh = await fileOpen({ id: 'ocr-input', mimeTypes: ['image/*'], description: 'Image files' });
+      this.startOcr(fh);
+    } catch (e) {
+      if (!(e instanceof DOMException && e.name === "AbortError" && e.message === "The user aborted a request.")) {
+        throw e;
+      }
+    }
   }
 
   windowDragOver(event: DragEvent) {

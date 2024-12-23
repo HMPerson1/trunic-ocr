@@ -42,15 +42,17 @@ mat-toolbar {
 }
 
 .img-drop-indicator.img-drop-active {
-  border-color: blue;
+  border-color: var(--mat-sys-primary);
 }
 
 .img-drop-help {
   width: 100%;
   height: 100%;
 
-  border: 10px dashed gray;
-  font-size: larger;
+  border: 10px dashed var(--mat-sys-outline);
+
+  font: var(--mat-sys-title-large);
+  letter-spacing: var(--mat-sys-title-large-tracking);
 
   display: flex;
   flex-direction: column;
@@ -59,9 +61,10 @@ mat-toolbar {
 }
 
 .help-or {
-  font-size: medium;
+  font: var(--mat-sys-body-medium);
+  letter-spacing: var(--mat-sys-body-medium-tracking);
   font-style: italic;
-  margin: .5em 0;
+  margin: 1em 0;
 }
 
 .help-or::before {
