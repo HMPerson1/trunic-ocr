@@ -170,7 +170,7 @@ export class AppComponent {
       const fh = await fileOpen({ id: 'ocr-input', mimeTypes: ['image/*'], description: 'Image files' });
       this.startOcr(fh);
     } catch (e) {
-      if (!(e instanceof DOMException && e.name === "AbortError" && e.message === "The user aborted a request.")) {
+      if (!(e instanceof DOMException && e.name === "AbortError" && e.message.includes("The user aborted a request."))) {
         throw e;
       }
     }
