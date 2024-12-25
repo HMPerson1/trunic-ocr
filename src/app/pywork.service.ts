@@ -83,8 +83,7 @@ export class PyworkService {
     const reqId = genReqId();
     const progOut = new Subject<any>();
     const { promise, resolve, reject } = Promise.withResolvers();
-    promise.then(() => progOut.complete());
-    promise.catch(e => progOut.error(e));
+    promise.then(() => progOut.complete(), e => progOut.error(e));
     this.#activeRequests.set(reqId, { resolve, progress: v => progOut.next((v as any)), reject });
     const msg: PyWorkRequest = { id: reqId, name: 'oneshotRecognize', data: imgRef };
     this.worker.postMessage(msg);
