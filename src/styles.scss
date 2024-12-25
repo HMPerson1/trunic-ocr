@@ -33,3 +33,51 @@ body {
   background: var(--mat-sys-surface);
   color: var(--mat-sys-on-surface);
 }
+
+button {
+  // https://css-tricks.com/overriding-default-button-styles/
+
+  margin: 0;
+  -moz-appearance: none;
+
+  // https://github.com/angular/components/blob/main/src/material/button/button.scss
+
+  -webkit-user-select: none;
+  user-select: none;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  outline: none;
+  line-height: inherit;
+  -webkit-appearance: none;
+  overflow: visible;
+  vertical-align: middle;
+  background: transparent;
+
+  &::-moz-focus-inner {
+    padding: 0;
+    border: 0;
+  }
+
+  &:active {
+    outline: none;
+  }
+
+  &:hover {
+    cursor: pointer;
+  }
+
+  &:disabled {
+    cursor: default;
+    pointer-events: none;
+  }
+
+  &[hidden] {
+    display: none;
+  }
+
+  appearance: none;
+  padding: 0;
+}

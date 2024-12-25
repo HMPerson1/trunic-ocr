@@ -2,36 +2,49 @@
 
 :host {
   height: 100%;
+  min-width: min-content;
+
   display: flex;
   flex-direction: column;
+
+  &>* {
+    flex: none;
+  }
+
+  &>.content {
+    flex: 1;
+  }
 }
 
 mat-toolbar {
-  gap: 8px;
+  gap: 16px;
   @include mat.form-field-density(-4);
 
-  & .app-title {
-    margin-right: 48px;
+  &>* {
+    flex: none;
   }
 
-  & mat-form-field {
-    width: 280px;
+  &>mat-form-field {
+    width: 256px;
   }
 
-  & .toolbar-spacer {
-    flex: 1 1 auto;
+  &>.toolbar-spacer {
+    flex: 1;
   }
 }
 
 .content {
-  flex: 1;
   padding: 40px;
-  contain: strict;
 }
 
 .img-drop-container {
   height: 100%;
-  contain: strict;
+  contain: paint;
+
+  &:has(>canvas) {
+    min-height: 400px;
+    contain: strict;
+  }
 }
 
 .img-drop-indicator {
@@ -50,10 +63,26 @@ mat-toolbar {
   height: 100%;
 
   border: 10px dashed var(--mat-sys-outline);
+  padding: 16px;
 
   font: var(--mat-sys-title-large);
   letter-spacing: var(--mat-sys-title-large-tracking);
 
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  &>* {
+    flex: 1;
+  }
+
+  &>.help-contents {
+    flex: none;
+  }
+}
+
+.help-contents {
+  padding-block: 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -73,6 +102,40 @@ mat-toolbar {
 
 .help-or::after {
   content: " -";
+}
+
+.example-inputs-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.example-help {
+  font: var(--mat-sys-body-large);
+  letter-spacing: var(--mat-sys-body-large-tracking);
+  padding-block: 8px;
+}
+
+.example-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+
+  &>button img {
+    display: block;
+    max-height: 120px;
+    max-width: 200px;
+
+    filter: brightness(.5);
+  }
+
+  &>button:hover img,
+  &>button:focus img {
+    filter: none;
+  }
 }
 
 .img-display {

@@ -8,6 +8,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { fileOpen } from 'browser-fs-access';
+import { example_inputs } from './example-inputs.json';
 import { ImageRendererCanvasComponent } from './image-renderer-canvas/image-renderer-canvas.component';
 import { PyworkService, type GlyphGeometry } from './pywork.service';
 import { PRONUNCIATION_SYSTEMS } from './trunic-data';
@@ -175,6 +176,10 @@ export class AppComponent {
     }
   }
 
+  async useExample(example_entry: { path: string }) {
+    this.startOcr(await (await fetch(`example-images/${example_entry.path}.png`)).blob());
+  }
+
   windowDragOver(event: DragEvent) {
     event.dataTransfer!.dropEffect = 'none'
     event.preventDefault();
@@ -206,6 +211,8 @@ export class AppComponent {
       this.currentOverlay[1].dispose();
     }
   }
+
+  _EXAMPLE_INPUTS = example_inputs;
 }
 
 async function getImageDataBlobFromDataTransfer(data: DataTransfer): Promise<Blob | undefined> {

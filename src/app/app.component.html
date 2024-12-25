@@ -1,5 +1,5 @@
 <mat-toolbar>
-  <span class="app-title">Trunic OCR</span>
+  <span>Trunic OCR</span>
   <mat-form-field appearance="outline" subscriptSizing="dynamic">
     <mat-label>Pronouciation System</mat-label>
     <mat-select [(value)]="pronctnSystem">
@@ -36,13 +36,31 @@
     } @else {
     <div class="img-drop-help">
       @if (hasInputImage()) {
-      <span>Loading image...</span>
+      <span class="help-contents">Loading image...</span>
       } @else {
-      <div>Drag and drop an image here</div>
-      <div class="help-or">or</div>
-      <div>Paste an image from the clipoard</div>
-      <div class="help-or">or</div>
-      <button mat-flat-button (click)="browseImage()">Browse for an image...</button>
+      <div></div>
+      <div class="help-contents">
+        <div>Drag and drop an image here</div>
+        <div class="help-or">or</div>
+        <div>Paste an image from the clipoard</div>
+        <div class="help-or">or</div>
+        <button mat-flat-button (click)="browseImage()">Browse for an image...</button>
+      </div>
+      <div class="example-inputs-wrapper">
+        <div class="example-help">or, try an example image:</div>
+        <div class="example-inputs">
+          @for (v of _EXAMPLE_INPUTS; track $index) {
+          <button (click)="useExample(v)">
+            <picture>
+              @for (ext of v.smallest; track $index) {
+              <source [srcset]="'example-images/small/' + v.path + ext" />
+              }
+              <img [src]="'example-images/small/' + v.path + '.png'" />
+            </picture>
+          </button>
+          }
+        </div>
+      </div>
       }
     </div>
     }
