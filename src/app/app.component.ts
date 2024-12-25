@@ -46,10 +46,10 @@ export class AppComponent {
     if (blob === undefined) {
       throw new Error('no image data from drop or paste event');
     }
-    this.startOcr(blob);
+    this.startOcr(blob[0]);
   }
 
-  async startOcr(blob: Blob) {
+  async startOcr(blob_: Promise<Blob>) {
     this.hasInputImage.set(true);
     this.imageRenderable.set(undefined);
     this.ocrProgress.set(undefined);
@@ -70,6 +70,7 @@ export class AppComponent {
       this.recognizedGlyphs.set(undefined);
     }
 
+    const blob = await blob_;
 
     // race python-opencv decode and browser decode
     const browserDecodeP = createImageBitmap(blob);
@@ -168,7 +169,7 @@ export class AppComponent {
   async browseImage() {
     try {
       const fh = await fileOpen({ id: 'ocr-input', mimeTypes: ['image/*'], description: 'Image files' });
-      this.startOcr(fh);
+      this.startOcr(Promise.resolve(fh));
     } catch (e) {
       if (!(e instanceof DOMException && e.name === "AbortError" && e.message.includes("The user aborted a request."))) {
         throw e;
@@ -177,7 +178,11 @@ export class AppComponent {
   }
 
   async useExample(example_entry: { path: string }) {
-    this.startOcr(await (await fetch(`example-images/${example_entry.path}.png`)).blob());
+    const resp = await fetch(`example-images/${example_entry.path}.png`);
+    if (!resp.ok) {
+      throw Error("error response fetching example", { cause: resp });
+    }
+    this.startOcr(resp.blob());
   }
 
   windowDragOver(event: DragEvent) {
@@ -215,7 +220,7 @@ export class AppComponent {
   _EXAMPLE_INPUTS = example_inputs;
 }
 
-async function getImageDataBlobFromDataTransfer(data: DataTransfer): Promise<Blob | undefined> {
+async function getImageDataBlobFromDataTransfer(data: DataTransfer): Promise<[Promise<Blob>] | undefined> {
   const dtFiles = Array.from(data.items).filter(i => i.kind === 'file').map(i => i.getAsFile()!);
   const urls = data.getData('text/uri-list').split('\r\n').filter(s => !s.startsWith('#') && s.length > 0 && URL.canParse(s)).map(v => new URL(v));
   // 1. data url with type `image`
@@ -223,26 +228,26 @@ async function getImageDataBlobFromDataTransfer(data: DataTransfer): Promise<Blo
   const dataUrlResps = await Promise.all(dataUrls.map(v => fetch(v)));
   const dataUrlRespImage = dataUrlResps.find(r => r.headers.get('Content-Type')!.startsWith('image/'));
   if (dataUrlRespImage !== undefined) {
-    return await dataUrlRespImage.blob();
+    return [dataUrlRespImage.blob()];
   }
   // 2. file with type `image` (guessed by extension)
   const imageFile = dtFiles.find(f => f.type.startsWith('image/'));
   if (imageFile !== undefined) {
-    return imageFile;
+    return [Promise.resolve(imageFile)];
   }
   // 3. non-data url
   const nondataUrl = urls.find(v => v.protocol !== 'data:');
   if (nondataUrl !== undefined) {
     // we could try fetching all the urls and pick the one with `Content-Type: image/*`, but that's probably too expensive
-    return await (await fetch(nondataUrl)).blob();
+    return [(await fetch(nondataUrl)).blob()];
   }
   // 4. non-image file
   if (dtFiles.length > 0) {
-    return dtFiles[0];
+    return [Promise.resolve(dtFiles[0])];
   }
   // 5. non-image data url
   if (dataUrlResps.length > 0) {
-    return await dataUrlResps[0].blob();
+    return [dataUrlResps[0].blob()];
   }
   return undefined;
 }
