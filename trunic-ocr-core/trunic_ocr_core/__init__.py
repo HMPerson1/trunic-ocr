@@ -120,6 +120,8 @@ def findGlyphs(src_raw: NDArray_u8, *, lax=False):
 
     glyph_templates = make_templates(glyph_geometry)
 
+    baselines_spec = sort_baselines(stroke_width, baselines_spec)
+
     glyph_width = glyph_geometry.glyph_width
     glyph_origins_raw = np.array(
         [
@@ -259,7 +261,7 @@ def find_baselines(
     strokes_f: NDArray_f32,
     min_aspect_ratio=3.5,
     filter_thresh_pct=85,
-) -> tuple[NDArray_u8, NDArray_u8, list[BaselineSpec]]:
+) -> tuple[NDArray_u8, list[BaselineSpec]]:
     line_min_len = round(stroke_width * min_aspect_ratio)
     kernel_x = np.ones(line_min_len, dtype=np.float32)
     kernel_y = np.array(
@@ -900,6 +902,27 @@ def make_templates(g: GlyphGeometry) -> GlyphTemplates:
         mask=glyph_template_mask[:-1].copy(),
         base=make_glyph_template_base(),
     )
+
+
+def sort_baselines(
+    stroke_width: int, baselines_spec: list[BaselineSpec]
+) -> list[BaselineSpec]:
+    blines_i = np.array(
+        sorted(range(len(baselines_spec)), key=lambda i: baselines_spec[i].x)
+    )
+    blines_ys = np.array([baselines_spec[i].y for i in blines_i], dtype=np.int16)
+    kern = np.ones(stroke_width, dtype=np.intp)
+    y_grouped: dict[int, np.ndarray] = dict()
+
+    while len(blines_ys) > 0:
+        bincount = np.bincount(blines_ys)
+        y_sel = int(np.argmax(np.convolve(bincount, kern, mode="valid")))
+        sel_mask = (y_sel <= blines_ys) & (blines_ys < y_sel + stroke_width)
+        y_grouped[y_sel] = blines_i[sel_mask]
+        blines_i = blines_i[~sel_mask]
+        blines_ys = blines_ys[~sel_mask]
+
+    return [baselines_spec[i] for k in sorted(y_grouped.keys()) for i in y_grouped[k]]
 
 
 class RecognizedGlyphPod(typing.TypedDict):
