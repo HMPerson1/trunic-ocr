@@ -87,6 +87,7 @@ onmessage = async ({ data }: { data: PyWorkRequest }) => {
           const msg: PyWorkError = { type: 'e', id: data.id, data: undefined };
           postMessage(msg);
         } else {
+          console.error(e);
           const msg: PyWorkError = { type: 'e', id: data.id, data: String(e) };
           postMessage(msg);
         }
@@ -115,11 +116,21 @@ onmessage = async ({ data }: { data: PyWorkRequest }) => {
 }
 
 async function impl_oneshotRecognize(_py: PyodideInterface, pypkg: any, data: PyWorkRef, postProgress: PostProgressFn<[number, any, number]>) {
+  try {
+    await impl_oneshotRecognize_real(_py, pypkg, data, false, postProgress);
+  } catch (e) {
+    console.warn("python exception; retrying");
+    console.warn(e);
+    await impl_oneshotRecognize_real(_py, pypkg, data, true, postProgress);
+  }
+}
+
+async function impl_oneshotRecognize_real(_py: PyodideInterface, pypkg: any, data: PyWorkRef, lax: boolean, postProgress: PostProgressFn<[number, any, number]>) {
   const perfTiming_start = performance.now();
   postProgress([0, undefined, performance.now() - perfTiming_start], { alsoYield: false });
 
   const [strokesPx, geomPx, tmplPx, originsPx] = await (async () => {
-    const pyGen: PyGenerator & PyIterator = pypkg.findGlyphs(proxyStore.get(data));
+    const pyGen: PyGenerator & PyIterator = pypkg.findGlyphs.callKwargs(proxyStore.get(data), lax ? { lax: true } : {});
     try {
       for (let i = 1; i <= 12; i++) {
         const iterRes = pyGen.next();

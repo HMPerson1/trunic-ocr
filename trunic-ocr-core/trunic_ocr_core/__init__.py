@@ -31,7 +31,7 @@ def loadBitmap(bmpData: memoryview, width: int, height: int) -> NDArray_u8:
     return np.asarray(bmpData).reshape(height, width, 4)
 
 
-def findGlyphs(src_raw: NDArray_u8):
+def findGlyphs(src_raw: NDArray_u8, *, lax=False):
     src, upscale = preprocess(src_raw)
     yield 1
     strokes_raw = segmentThreshold(src, upscale)
@@ -45,7 +45,13 @@ def findGlyphs(src_raw: NDArray_u8):
     del medialAxis
     strokes_f = np.float32(strokes)
     yield 5
-    baselines, baselines_spec = find_baselines(upscale, stroke_width, strokes, strokes_f)
+    baselines, baselines_spec = find_baselines(
+        upscale,
+        stroke_width,
+        strokes,
+        strokes_f,
+        **(dict(filter_thresh_pct=80) if lax else dict()),
+    )
     yield 6
     stroke_angle = find_stroke_angle(medialAxisMask, strokes)
     del medialAxisMask
@@ -88,6 +94,7 @@ def findGlyphs(src_raw: NDArray_u8):
         segment_coords_raw_vert,
         approx_glyph_height,
         all_endpoints,
+        **(dict(spacing_init_bsln_qtl=0.75, spacing_fit_thresh=0.7) if lax else dict()),
     )
     del all_endpoints
     del segment_coords_raw_vert
@@ -551,6 +558,10 @@ def find_approx_glyph_height(
     return ret
 
 
+class GeomNoGoodSpacingException(Exception):
+    pass
+
+
 def find_geometry(
     upscale: int,
     stroke_width: int,
@@ -560,6 +571,8 @@ def find_geometry(
     approx_glyph_height: int,
     all_endpoints: npt.NDArray[np.uint32],
     samples_per_check=50,
+    spacing_init_bsln_qtl=0.25,
+    spacing_fit_thresh=0.8,
 ) -> tuple[NDArray_f32, NDArray_f32, NDArray_f32, NDArray_f32]:
     def filter_in_baseline(
         all_endpoints: npt.NDArray[np.uint32], bsln_spec: BaselineSpec
@@ -603,7 +616,9 @@ def find_geometry(
     def find_spacing():
         # upper limit for grid spacing; each word must contain at least one grid square
         bsln_min_length = np.quantile(
-            [b.length for b in baselines_spec], 0.25, method="closest_observation"
+            [b.length for b in baselines_spec],
+            spacing_init_bsln_qtl,
+            method="closest_observation",
         )
         spacing0 = xform_inv[0, 0] * bsln_min_length
 
@@ -619,12 +634,13 @@ def find_geometry(
             fits_l_y, offsets_l_y = check_grid_fit(all_endpoints_o_l[1], spacings)
             fits_all = (fits_u_x + fits_l_x + fits_u_y + fits_l_y) / 4
             m = np.argmax(fits_all)
-            if fits_all[m] > 0.8:
+            if fits_all[m] > spacing_fit_thresh:
                 return (
                     spacings[m],
                     np.array([offsets_u_x[m], offsets_u_y[m]]),
                     np.array([offsets_l_x[m], offsets_l_y[m]]),
                 )
+        raise GeomNoGoodSpacingException()
 
     spacing_o, offset_o_u, offset_o_l = find_spacing()
 
@@ -971,7 +987,7 @@ def fit_glyph_one(
 
     cur_strokes = np.zeros(len(glyph_template), dtype=np.bool_)
     cur_template = glyph_template_base.copy()
-    cur_fit, cur_offset = check_templates(cur_template[np.newaxis, ...])
+    (cur_fit,), (cur_offset,) = check_templates(cur_template[np.newaxis, ...])
     for _i in range(len(glyph_template)):
         next_strokes, next_templates = gen_next_templates(cur_strokes, cur_template)
         fits, offsets = check_templates(next_templates)
@@ -983,7 +999,7 @@ def fit_glyph_one(
         cur_fit = fits[next_i]
         cur_offset = offsets[next_i]
     return RecognizedGlyphPod(
-        strokes=tuple(map(int, np.packbits(cur_strokes, bitorder='little'))),
+        strokes=tuple(map(int, np.packbits(cur_strokes, bitorder="little"))),
         origin=tuple(map(int, glyph_origin_raw + cur_offset)),
     )
 
