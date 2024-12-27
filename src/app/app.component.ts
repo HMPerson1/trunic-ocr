@@ -2,6 +2,7 @@ import { Overlay, type OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
@@ -10,6 +11,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { fileOpen } from 'browser-fs-access';
 import { example_inputs } from './example-inputs.json';
 import { ImageRendererCanvasComponent } from './image-renderer-canvas/image-renderer-canvas.component';
+import { InfoDialogComponent } from './info-dialog/info-dialog.component';
 import { PyworkService, type GlyphGeometry } from './pywork.service';
 import { PRONUNCIATION_SYSTEMS } from './trunic-data';
 import { TrunicGlyphDetailComponent } from './trunic-glyph-detail/trunic-glyph-detail.component';
@@ -38,8 +40,11 @@ export class AppComponent {
   readonly _PNS = PRONUNCIATION_SYSTEMS;
   readonly pronctnSystem = signal(PRONUNCIATION_SYSTEMS[0]);
 
-  constructor(private readonly pywork: PyworkService, private readonly cdkOverlay: Overlay) {
-  }
+  constructor(
+    private readonly pywork: PyworkService,
+    private readonly cdkOverlay: Overlay,
+    private readonly matDialog: MatDialog,
+  ) { }
 
   async handleData(data: DataTransfer) {
     const blob = await getImageDataBlobFromDataTransfer(data);
@@ -215,6 +220,10 @@ export class AppComponent {
     } else if (this.currentOverlay && event.target === this.currentOverlay[0]) {
       this.currentOverlay[1].dispose();
     }
+  }
+
+  openInfoDialog() {
+    this.matDialog.open(InfoDialogComponent, { autoFocus: 'dialog' });
   }
 
   _EXAMPLE_INPUTS = example_inputs;
