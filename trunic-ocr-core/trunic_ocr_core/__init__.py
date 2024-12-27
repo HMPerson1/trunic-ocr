@@ -42,11 +42,10 @@ def findGlyphs(src_raw: NDArray_u8):
     stroke_width = findStrokeWidth(medialAxis)
     yield 4
     strokes = clean_strokes(strokes_raw, medialAxis, stroke_width)
-    del strokes_raw
     del medialAxis
     strokes_f = np.float32(strokes)
     yield 5
-    baselines, baselines_spec = find_baselines(upscale, stroke_width, strokes_f)
+    baselines, baselines_spec = find_baselines(upscale, stroke_width, strokes, strokes_f)
     yield 6
     stroke_angle = find_stroke_angle(medialAxisMask, strokes)
     del medialAxisMask
@@ -61,6 +60,7 @@ def findGlyphs(src_raw: NDArray_u8):
         segments_raw_slant_n,
         segment_coords_raw_slant_n,
     ) = find_slanted_segments(upscale, stroke_width, strokes, strokes_f, stroke_angle)
+    del strokes_f
     yield 9
     all_segments_raw = segments_raw_vert | segments_raw_slant_p | segments_raw_slant_n
     del segments_raw_vert
@@ -125,7 +125,7 @@ def findGlyphs(src_raw: NDArray_u8):
     del baselines_spec
 
     strokes_bordered = cv2.copyMakeBorder(
-        strokes_f,
+        np.float32(strokes_raw),
         stroke_width,
         stroke_width * 3,
         stroke_width,
@@ -133,7 +133,7 @@ def findGlyphs(src_raw: NDArray_u8):
         cv2.BORDER_CONSTANT,
         value=0,
     )
-    del strokes_f
+    del strokes_raw
 
     gc.collect()
     return (
@@ -248,9 +248,10 @@ class BaselineSpec:
 def find_baselines(
     upscale: int,
     stroke_width: int,
+    strokes: NDArray_u8,
     strokes_f: NDArray_f32,
     min_aspect_ratio=3.5,
-    filter_thresh_pct=90,
+    filter_thresh_pct=85,
 ) -> tuple[NDArray_u8, NDArray_u8, list[BaselineSpec]]:
     line_min_len = round(stroke_width * min_aspect_ratio)
     kernel_x = np.ones(line_min_len, dtype=np.float32)
@@ -302,6 +303,7 @@ def find_baselines(
     bslns_lower_edge &= cv2.dilate(bslns_both_edge, mk_rect(2 * stroke_width, 3))
 
     bslns_lower_edge_dil = cv2.dilate(bslns_lower_edge, mk_rect(line_min_len, 3))
+    bslns_lower_edge_dil &= cv2.dilate(strokes, mk_rect(upscale, upscale))
     bslns_lower_edge_dil = cv2.morphologyEx(
         bslns_lower_edge_dil, cv2.MORPH_CLOSE, mk_rect(stroke_width, 1)
     )
