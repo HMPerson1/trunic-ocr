@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatTooltip } from '@angular/material/tooltip';
 import { fileOpen } from 'browser-fs-access';
 import { example_inputs } from './example-inputs.json';
 import { ImageRendererCanvasComponent } from './image-renderer-canvas/image-renderer-canvas.component';
@@ -19,7 +20,7 @@ import { TrunicGlyphComponent } from './trunic-glyph/trunic-glyph.component';
 
 @Component({
   selector: 'app-root',
-  imports: [ImageRendererCanvasComponent, TrunicGlyphComponent, MatToolbarModule, MatIconModule, MatButtonModule, MatProgressBarModule, MatFormFieldModule, MatSelectModule],
+  imports: [ImageRendererCanvasComponent, TrunicGlyphComponent, MatToolbarModule, MatIconModule, MatButtonModule, MatProgressBarModule, MatFormFieldModule, MatSelectModule, MatTooltip],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
   host: {

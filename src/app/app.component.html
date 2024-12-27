@@ -9,7 +9,7 @@
     </mat-select>
   </mat-form-field>
   <span class="toolbar-spacer"></span>
-  <button mat-icon-button (click)="openInfoDialog()"><mat-icon>info</mat-icon></button>
+  <button mat-icon-button matTooltip="About" (click)="openInfoDialog()"><mat-icon>info</mat-icon></button>
 </mat-toolbar>
 <mat-progress-bar [mode]="hasInputImage() && ocrProgress() === undefined ? 'query' : 'determinate'"
   [value]="ocrProgress()"></mat-progress-bar>
@@ -42,12 +42,12 @@
       <div class="help-contents">
         <div>Drag and drop an image here</div>
         <div class="help-or">or</div>
-        <div>Paste an image from the clipoard</div>
+        <div>Paste an image from the clipboard</div>
         <div class="help-or">or</div>
         <button mat-flat-button (click)="browseImage()">Browse for an image...</button>
       </div>
       <div class="example-inputs-wrapper">
-        <div class="example-help">or, try an example image:</div>
+        <div class="example-help">or, try one of these:</div>
         <div class="example-inputs">
           @for (v of _EXAMPLE_INPUTS; track $index) {
           <button (click)="useExample(v)">
@@ -55,7 +55,7 @@
               @for (ext of v.smallest; track $index) {
               <source [srcset]="'example-images/small/' + v.path + ext" />
               }
-              <img [src]="'example-images/small/' + v.path + '.png'" />
+              <img [src]="'example-images/small/' + v.path + '.png'" alt="image of trunic text" />
             </picture>
           </button>
           }
