@@ -1,0 +1,76 @@
+input:
+  filename: vowel-table.png
+  lax: false
+output:
+- origin:
+  - 29
+  - 29
+  strokes: '000000111000'
+- origin:
+  - 269
+  - 29
+  strokes: '000000011000'
+- origin:
+  - 509
+  - 29
+  strokes: '000000000110'
+- origin:
+  - 749
+  - 29
+  strokes: '000000001110'
+- origin:
+  - 990
+  - 29
+  strokes: '000000001100'
+- origin:
+  - 1229
+  - 29
+  strokes: '000000110000'
+- origin:
+  - 29
+  - 449
+  strokes: '000000011110'
+- origin:
+  - 269
+  - 449
+  strokes: '000000111100'
+- origin:
+  - 509
+  - 449
+  strokes: '000000101110'
+- origin:
+  - 749
+  - 449
+  strokes: '000000111010'
+- origin:
+  - 989
+  - 449
+  strokes: '000000110110'
+- origin:
+  - 1229
+  - 449
+  strokes: '000000011010'
+- origin:
+  - 29
+  - 869
+  strokes: '000000010000'
+- origin:
+  - 269
+  - 869
+  strokes: '000000100000'
+- origin:
+  - 509
+  - 869
+  strokes: '000000000100'
+- origin:
+  - 748
+  - 869
+  strokes: '000000000010'
+- origin:
+  - 989
+  - 869
+  strokes: '000000111110'
+- origin:
+  - 1229
+  - 869
+  strokes: '000000001010'

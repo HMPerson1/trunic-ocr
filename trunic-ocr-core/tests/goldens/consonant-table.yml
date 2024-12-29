@@ -1,0 +1,100 @@
+input:
+  filename: consonant-table.png
+  lax: false
+output:
+- origin:
+  - 29
+  - 29
+  strokes: '000101000000'
+- origin:
+  - 269
+  - 29
+  strokes: '001101000000'
+- origin:
+  - 509
+  - 29
+  strokes: '111111000000'
+- origin:
+  - 749
+  - 29
+  strokes: '100010000000'
+- origin:
+  - 989
+  - 29
+  strokes: '010001000000'
+- origin:
+  - 1229
+  - 29
+  strokes: '101010000000'
+- origin:
+  - 29
+  - 449
+  strokes: '010101000000'
+- origin:
+  - 269
+  - 449
+  strokes: '110001000000'
+- origin:
+  - 509
+  - 449
+  strokes: '100011000000'
+- origin:
+  - 749
+  - 449
+  strokes: '010100000000'
+- origin:
+  - 989
+  - 449
+  strokes: '001010000000'
+- origin:
+  - 1229
+  - 449
+  strokes: '100110000000'
+- origin:
+  - 29
+  - 869
+  strokes: '011001000000'
+- origin:
+  - 269
+  - 869
+  strokes: '111010000000'
+- origin:
+  - 509
+  - 869
+  strokes: '010111000000'
+- origin:
+  - 749
+  - 869
+  strokes: '110110000000'
+- origin:
+  - 989
+  - 869
+  strokes: '011011000000'
+- origin:
+  - 1229
+  - 869
+  strokes: '101111000000'
+- origin:
+  - 29
+  - 1289
+  strokes: '111101000000'
+- origin:
+  - 269
+  - 1289
+  strokes: '010011000000'
+- origin:
+  - 509
+  - 1289
+  strokes: '110010000000'
+- origin:
+  - 749
+  - 1289
+  strokes: '011010000000'
+- origin:
+  - 989
+  - 1289
+  strokes: '101000000000'
+- origin:
+  - 1229
+  - 1289
+  strokes: '010010000000'
