@@ -23,7 +23,12 @@
       "ES2022",
       "ESNext.Promise",
       "dom"
-    ]
+    ],
+    "paths": {
+      "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.mjs": [
+        "./node_modules/pyodide/pyodide.d.ts"
+      ],
+    }
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,

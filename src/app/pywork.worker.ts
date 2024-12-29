@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 
-import { loadPyodide, type PyodideInterface } from "pyodide";
+import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.mjs";
+import type { PyodideInterface } from "pyodide";
 import type { PyBuffer, PyGenerator, PyIterator, PyProxy, TypedArray } from "pyodide/ffi";
 import type { PyWorkError, PyWorkProgress, PyWorkRef, PyWorkRequest, PyWorkResponse } from "./worker-api";
 
@@ -10,7 +11,7 @@ if (!isLittleEndian()) {
 
 const init = (async () => {
   const [pyodide, trunicOcrWheel] = await Promise.all([
-    loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/", packages: ["numpy", "opencv-python"] }),
+    loadPyodide({ packages: ["numpy", "opencv-python"] }),
     fetch("trunic_ocr_core-0.1.0-py3-none-any.whl").then(v => v.arrayBuffer())]);
   pyodide.unpackArchive(trunicOcrWheel, 'wheel');
   const pypkg = pyodide.pyimport('trunic_ocr_core');
