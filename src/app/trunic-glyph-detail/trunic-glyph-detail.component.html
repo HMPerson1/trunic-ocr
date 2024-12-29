@@ -6,9 +6,9 @@
         }
         <app-trunic-glyph-image class="glyph-image" [geometry]="_DEFAULT_GLYPH_GEOMETRY" [strokesPacked]="data[0]" />
         @if (data[1] === '???') {
-        <h3 class="error">???</h3>
+        <h3 class="font-noto error">???</h3>
         } @else {
-        <h3>
+        <h3 class="font-noto">
             @for(sym of data[1]; track $index) {
             @if ($index > 0) {
             <span>,&ngsp;</span>

@@ -30,12 +30,8 @@ mat-card-content {
         grid-row: 2;
         text-align: center;
 
-        @include mat.theme((typography: 'Noto Sans'));
-
-        & {
-            font: var(--mat-sys-display-small);
-            letter-spacing: var(--mat-sys-display-small-tracking);
-        }
+        font: var(--mat-sys-display-small);
+        letter-spacing: var(--mat-sys-display-small-tracking);
     }
 
     &>ul {

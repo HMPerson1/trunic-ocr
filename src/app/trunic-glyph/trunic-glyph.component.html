@@ -1,7 +1,7 @@
 <app-trunic-glyph-image [geometry]="geometry()" [strokesPacked]="strokesPacked()" />
 
 <div class="ptext-align" [style.top.px]="geometry().glyph_template_origin[1]">
-  <span class="ptext" [style.font-size.px]="_fontsize()">
+  <span class="font-noto ptext" [style.font-size.px]="_fontsize()">
     @if (_textFlip()) {
     <ng-container *ngTemplateOutlet="text_tspan; context: {t: _textV()}" />
     <ng-container *ngTemplateOutlet="text_tspan; context: {t: _textC()}" />

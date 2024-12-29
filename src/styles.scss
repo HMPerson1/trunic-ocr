@@ -15,6 +15,10 @@ html {
   ));
 }
 
+.font-noto {
+  @include mat.theme((typography: 'Noto Sans'));
+}
+
 *,
 *::before,
 *::after {
