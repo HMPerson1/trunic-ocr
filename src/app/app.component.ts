@@ -18,9 +18,13 @@ import { PRONUNCIATION_SYSTEMS } from './trunic-data';
 import { TrunicGlyphDetailComponent } from './trunic-glyph-detail/trunic-glyph-detail.component';
 import { TrunicGlyphComponent } from './trunic-glyph/trunic-glyph.component';
 
+import * as default_glyph_geometry from './trunic-glyph-detail/default-glyph-geometry.json'
+import * as trunic_data from './trunic-data'
+import { TrunicGlyphImageComponent } from "./trunic-glyph-image/trunic-glyph-image.component";
+
 @Component({
   selector: 'app-root',
-  imports: [ImageRendererCanvasComponent, TrunicGlyphComponent, MatToolbarModule, MatIconModule, MatButtonModule, MatProgressBarModule, MatFormFieldModule, MatSelectModule, MatTooltip],
+  imports: [ImageRendererCanvasComponent, TrunicGlyphComponent, MatToolbarModule, MatIconModule, MatButtonModule, MatProgressBarModule, MatFormFieldModule, MatSelectModule, MatTooltip, TrunicGlyphImageComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
   host: {
@@ -45,7 +49,23 @@ export class AppComponent {
     private readonly pywork: PyworkService,
     private readonly cdkOverlay: Overlay,
     private readonly matDialog: MatDialog,
-  ) { }
+  ) {
+    const gbb_width = 80;
+    const gbb_height = 140;
+    (async () => {
+      const cvs = new OffscreenCanvas(gbb_width * 6, gbb_height * 4);
+
+      const ctx = cvs.getContext('2d')!;
+      ctx.fillStyle = '#fff'
+      ctx.fillRect(0, 0, cvs.width, cvs.height);
+      this.imageRenderable.set(cvs.transferToImageBitmap());
+    })()
+    this.recognizedGlyphs.set([default_glyph_geometry as GlyphGeometry,
+    Array.from({ length: 24 }, (_v, i) => ({
+      origin: [10 + (i % 6) * gbb_width, 10 + Math.floor(i / 6) * gbb_height],
+      strokes: trunic_data.CNSNT_LUT.findIndex(x => x === i)
+    }))])
+  }
 
   async handleData(data: DataTransfer) {
     const blob = await getImageDataBlobFromDataTransfer(data);

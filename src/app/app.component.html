@@ -27,7 +27,7 @@
       <details name="glyph" [style.top.px]="glyph.origin[1]" [style.left.px]="glyph.origin[0]"
         (toggle)="onGlyphToggle($event, $index)">
         <summary>
-          <app-trunic-glyph [geometry]="geometry" [pronctnSystem]="pronctnSystem()" [strokesPacked]="glyph.strokes" />
+          <app-trunic-glyph-image style="color: #000" [geometry]="geometry" [strokesPacked]="glyph.strokes" />
         </summary>
       </details>
       }
