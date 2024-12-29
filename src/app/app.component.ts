@@ -11,6 +11,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltip } from '@angular/material/tooltip';
 import { fileOpen } from 'browser-fs-access';
 import { example_inputs } from './example-inputs.json';
+import { ImageExtToMimeTypePipe } from './image-ext-to-mime-type.pipe';
 import { ImageRendererCanvasComponent } from './image-renderer-canvas/image-renderer-canvas.component';
 import { InfoDialogComponent } from './info-dialog/info-dialog.component';
 import { PyworkService, type GlyphGeometry } from './pywork.service';
@@ -20,7 +21,7 @@ import { TrunicGlyphComponent } from './trunic-glyph/trunic-glyph.component';
 
 @Component({
   selector: 'app-root',
-  imports: [ImageRendererCanvasComponent, TrunicGlyphComponent, MatToolbarModule, MatIconModule, MatButtonModule, MatProgressBarModule, MatFormFieldModule, MatSelectModule, MatTooltip],
+  imports: [ImageRendererCanvasComponent, TrunicGlyphComponent, MatToolbarModule, MatIconModule, MatButtonModule, MatProgressBarModule, MatFormFieldModule, MatSelectModule, MatTooltip, ImageExtToMimeTypePipe],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
   host: {

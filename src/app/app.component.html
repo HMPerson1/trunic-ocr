@@ -53,7 +53,7 @@
           <button (click)="useExample(v)">
             <picture>
               @for (ext of v.smallest; track $index) {
-              <source [srcset]="'example-images/small/' + v.path + ext" />
+              <source [srcset]="'example-images/small/' + v.path + ext" [type]="ext | imageExtToMimeType" />
               }
               <img [src]="'example-images/small/' + v.path + '.png'" alt="image of trunic text" />
             </picture>
