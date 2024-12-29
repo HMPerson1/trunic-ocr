@@ -1,0 +1,124 @@
+input:
+  filename: 15-2.png
+  lax: false
+output:
+- origin:
+  - 37
+  - 25
+  strokes: '101010111001'
+- origin:
+  - 195
+  - 25
+  strokes: '010111110000'
+- origin:
+  - 353
+  - 25
+  strokes: '110110000000'
+- origin:
+  - 448
+  - 25
+  strokes: '101010110110'
+- origin:
+  - 543
+  - 25
+  strokes: '101010000000'
+- origin:
+  - 702
+  - 25
+  strokes: '011001110001'
+- origin:
+  - 861
+  - 25
+  strokes: '011001011111'
+- origin:
+  - 955
+  - 25
+  strokes: '111101010001'
+- origin:
+  - 1049
+  - 25
+  strokes: '001101110001'
+- origin:
+  - 1209
+  - 25
+  strokes: '011010111100'
+- origin:
+  - 1367
+  - 25
+  strokes: '010011111000'
+- origin:
+  - 1462
+  - 25
+  strokes: '011001000000'
+- origin:
+  - 37
+  - 237
+  strokes: '010001000000'
+- origin:
+  - 131
+  - 237
+  strokes: '110010011110'
+- origin:
+  - 226
+  - 237
+  strokes: '100110000000'
+- origin:
+  - 321
+  - 237
+  strokes: '010010011110'
+- origin:
+  - 543
+  - 237
+  strokes: '110110111110'
+- origin:
+  - 702
+  - 237
+  strokes: '011001011111'
+- origin:
+  - 796
+  - 237
+  strokes: '010101010001'
+- origin:
+  - 955
+  - 237
+  strokes: '101010111001'
+- origin:
+  - 1114
+  - 237
+  strokes: '010100110000'
+- origin:
+  - 1208
+  - 237
+  strokes: '110110000000'
+- origin:
+  - 1303
+  - 237
+  strokes: '101010000000'
+- origin:
+  - 1462
+  - 237
+  strokes: '010111110000'
+- origin:
+  - 1620
+  - 237
+  strokes: '110010100000'
+- origin:
+  - 1715
+  - 237
+  strokes: '101010000000'
+- origin:
+  - 1874
+  - 237
+  strokes: '000101111110'
+- origin:
+  - 1968
+  - 237
+  strokes: '000101000110'
+- origin:
+  - 2063
+  - 237
+  strokes: '001101000000'
+- origin:
+  - 2158
+  - 237
+  strokes: '101010000000'

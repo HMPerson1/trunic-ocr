@@ -1,0 +1,316 @@
+input:
+  filename: 5-1.png
+  lax: false
+output:
+- origin:
+  - 304
+  - 32
+  strokes: '010001110000'
+- origin:
+  - 406
+  - 32
+  strokes: '101010000000'
+- origin:
+  - 577
+  - 32
+  strokes: '101000110000'
+- origin:
+  - 679
+  - 32
+  strokes: '001101000000'
+- origin:
+  - 850
+  - 32
+  strokes: '000101110000'
+- origin:
+  - 952
+  - 32
+  strokes: '110110000000'
+- origin:
+  - 1054
+  - 33
+  strokes: '101010000000'
+- origin:
+  - 1224
+  - 33
+  strokes: '010010000110'
+- origin:
+  - 1327
+  - 32
+  strokes: '011001000000'
+- origin:
+  - 1497
+  - 32
+  strokes: '101010000011'
+- origin:
+  - 1599
+  - 33
+  strokes: '110110100000'
+- origin:
+  - 1702
+  - 32
+  strokes: '010101000000'
+- origin:
+  - 1872
+  - 32
+  strokes: '010111110000'
+- origin:
+  - 2043
+  - 32
+  strokes: '101111000110'
+- origin:
+  - 2145
+  - 32
+  strokes: '011001101110'
+- origin:
+  - 2247
+  - 32
+  strokes: '111111000111'
+- origin:
+  - 2418
+  - 32
+  strokes: '110010000110'
+- origin:
+  - 2520
+  - 32
+  strokes: '111111000000'
+- origin:
+  - 716
+  - 261
+  strokes: '110110011110'
+- origin:
+  - 818
+  - 261
+  strokes: '110001000110'
+- origin:
+  - 920
+  - 261
+  strokes: '111111000000'
+- origin:
+  - 1091
+  - 261
+  strokes: '001101111001'
+- origin:
+  - 29
+  - 490
+  strokes: '000000110000'
+- origin:
+  - 200
+  - 490
+  strokes: '010001011110'
+- origin:
+  - 302
+  - 490
+  strokes: '110001000110'
+- origin:
+  - 403
+  - 490
+  strokes: '001101000000'
+- origin:
+  - 575
+  - 490
+  strokes: '101010111100'
+- origin:
+  - 746
+  - 490
+  strokes: '010001000000'
+- origin:
+  - 848
+  - 490
+  strokes: '110010000110'
+- origin:
+  - 950
+  - 490
+  strokes: '111111000000'
+- origin:
+  - 1121
+  - 490
+  strokes: '010001110001'
+- origin:
+  - 1223
+  - 490
+  strokes: '101010000011'
+- origin:
+  - 1393
+  - 490
+  strokes: '000000110000'
+- origin:
+  - 1564
+  - 490
+  strokes: '110010111100'
+- origin:
+  - 1666
+  - 490
+  strokes: '001101000111'
+- origin:
+  - 1837
+  - 490
+  strokes: '110110011110'
+- origin:
+  - 1939
+  - 489
+  strokes: '110001101110'
+- origin:
+  - 29
+  - 718
+  strokes: '101010111100'
+- origin:
+  - 200
+  - 718
+  strokes: '010111011111'
+- origin:
+  - 302
+  - 718
+  strokes: '000000101110'
+- origin:
+  - 473
+  - 718
+  strokes: '100011000000'
+- origin:
+  - 575
+  - 718
+  strokes: '110010111110'
+- origin:
+  - 746
+  - 718
+  strokes: '110110000000'
+- origin:
+  - 848
+  - 719
+  strokes: '101010000000'
+- origin:
+  - 950
+  - 719
+  strokes: '110010011000'
+- origin:
+  - 1052
+  - 718
+  strokes: '111111000000'
+- origin:
+  - 1223
+  - 719
+  strokes: '001101111001'
+- origin:
+  - 1324
+  - 718
+  strokes: '010101000000'
+- origin:
+  - 1496
+  - 718
+  strokes: '110010011110'
+- origin:
+  - 1598
+  - 718
+  strokes: '100010000000'
+- origin:
+  - 1699
+  - 719
+  strokes: '010010010000'
+- origin:
+  - 1802
+  - 718
+  strokes: '110110000000'
+- origin:
+  - 1972
+  - 718
+  strokes: '001101111001'
+- origin:
+  - 2143
+  - 719
+  strokes: '010010010001'
+- origin:
+  - 2245
+  - 718
+  strokes: '111111000111'
+- origin:
+  - 2416
+  - 719
+  strokes: '000000001010'
+- origin:
+  - 30
+  - 947
+  strokes: '000000111010'
+- origin:
+  - 200
+  - 947
+  strokes: '101010111100'
+- origin:
+  - 371
+  - 947
+  strokes: '010011111110'
+- origin:
+  - 473
+  - 947
+  strokes: '010010000000'
+- origin:
+  - 575
+  - 947
+  strokes: '010101000000'
+- origin:
+  - 746
+  - 947
+  strokes: '110110010000'
+- origin:
+  - 848
+  - 947
+  strokes: '110001000000'
+- origin:
+  - 950
+  - 947
+  strokes: '110010000110'
+- origin:
+  - 1052
+  - 947
+  strokes: '010101000000'
+- origin:
+  - 2047
+  - 947
+  strokes: '001101111001'
+- origin:
+  - 2149
+  - 947
+  strokes: '010101000000'
+- origin:
+  - 2320
+  - 947
+  strokes: '001101001111'
+- origin:
+  - 2422
+  - 947
+  strokes: '101111101110'
+- origin:
+  - 30
+  - 1176
+  strokes: '010111001010'
+- origin:
+  - 200
+  - 1176
+  strokes: '101000000110'
+- origin:
+  - 302
+  - 1176
+  strokes: '011011000000'
+- origin:
+  - 404
+  - 1176
+  strokes: '010101110000'
+- origin:
+  - 506
+  - 1176
+  strokes: '000101000000'
+- origin:
+  - 677
+  - 1176
+  strokes: '010010000110'
+- origin:
+  - 780
+  - 1176
+  strokes: '011001000000'
+- origin:
+  - 881
+  - 1176
+  strokes: '011011000000'
+- origin:
+  - 1052
+  - 1176
+  strokes: '001101011001'

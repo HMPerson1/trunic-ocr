@@ -1,0 +1,276 @@
+input:
+  filename: 4-1.png
+  lax: false
+output:
+- origin:
+  - 47
+  - 55
+  strokes: '010111110000'
+- origin:
+  - 217
+  - 55
+  strokes: '010101000110'
+- origin:
+  - 319
+  - 55
+  strokes: '110110000000'
+- origin:
+  - 422
+  - 55
+  strokes: '110001110000'
+- origin:
+  - 523
+  - 55
+  strokes: '011001101110'
+- origin:
+  - 625
+  - 55
+  strokes: '111111000111'
+- origin:
+  - 1345
+  - 55
+  strokes: '100010111111'
+- origin:
+  - 1447
+  - 55
+  strokes: '001101001111'
+- origin:
+  - 1549
+  - 55
+  strokes: '010101000000'
+- origin:
+  - 1719
+  - 55
+  strokes: '000000110000'
+- origin:
+  - 1890
+  - 55
+  strokes: '101010111100'
+- origin:
+  - 1991
+  - 55
+  strokes: '000101000000'
+- origin:
+  - 2163
+  - 55
+  strokes: '001101111001'
+- origin:
+  - 2264
+  - 56
+  strokes: '010101000000'
+- origin:
+  - 2435
+  - 55
+  strokes: '110010011110'
+- origin:
+  - 2537
+  - 55
+  strokes: '011001011110'
+- origin:
+  - 2639
+  - 55
+  strokes: '010010000000'
+- origin:
+  - 2741
+  - 55
+  strokes: '010101000000'
+- origin:
+  - 46
+  - 284
+  strokes: '000000110000'
+- origin:
+  - 217
+  - 284
+  strokes: '101010001010'
+- origin:
+  - 319
+  - 284
+  strokes: '010001110001'
+- origin:
+  - 421
+  - 284
+  strokes: '010010001101'
+- origin:
+  - 592
+  - 284
+  strokes: '101010000000'
+- origin:
+  - 694
+  - 284
+  strokes: '110010111100'
+- origin:
+  - 796
+  - 284
+  strokes: '111010000000'
+- origin:
+  - 1035
+  - 284
+  strokes: '000000110000'
+- origin:
+  - 2166
+  - 284
+  strokes: '101000110000'
+- origin:
+  - 2268
+  - 284
+  strokes: '011011000000'
+- origin:
+  - 2439
+  - 284
+  strokes: '010001000110'
+- origin:
+  - 2541
+  - 284
+  strokes: '010010000000'
+- origin:
+  - 2643
+  - 284
+  strokes: '101010000000'
+- origin:
+  - 47
+  - 512
+  strokes: '101010111100'
+- origin:
+  - 217
+  - 512
+  strokes: '011001001110'
+- origin:
+  - 320
+  - 513
+  strokes: '001101101110'
+- origin:
+  - 421
+  - 512
+  strokes: '101010010001'
+- origin:
+  - 592
+  - 512
+  strokes: '010111000110'
+- origin:
+  - 694
+  - 512
+  strokes: '110110000000'
+- origin:
+  - 865
+  - 513
+  strokes: '001101111100'
+- origin:
+  - 1035
+  - 512
+  strokes: '000000111010'
+- origin:
+  - 1137
+  - 513
+  strokes: '010100000111'
+- origin:
+  - 1239
+  - 512
+  strokes: '001101000111'
+- origin:
+  - 1410
+  - 513
+  strokes: '011001110001'
+- origin:
+  - 1580
+  - 513
+  strokes: '010010100000'
+- origin:
+  - 1682
+  - 512
+  strokes: '100110000000'
+- origin:
+  - 1921
+  - 512
+  strokes: '001101111001'
+- origin:
+  - 2023
+  - 513
+  strokes: '010101000000'
+- origin:
+  - 2194
+  - 512
+  strokes: '010111110000'
+- origin:
+  - 47
+  - 741
+  strokes: '100110010000'
+- origin:
+  - 149
+  - 741
+  strokes: '111010000000'
+- origin:
+  - 250
+  - 741
+  strokes: '100110001100'
+- origin:
+  - 353
+  - 741
+  strokes: '010010000000'
+- origin:
+  - 523
+  - 741
+  strokes: '101000101110'
+- origin:
+  - 694
+  - 741
+  strokes: '100011000000'
+- origin:
+  - 796
+  - 741
+  strokes: '110010111000'
+- origin:
+  - 898
+  - 741
+  strokes: '001101000000'
+- origin:
+  - 1000
+  - 741
+  strokes: '101010000110'
+- origin:
+  - 1102
+  - 741
+  strokes: '010101000000'
+- origin:
+  - 1272
+  - 741
+  strokes: '010111110000'
+- origin:
+  - 1443
+  - 741
+  strokes: '100011000000'
+- origin:
+  - 1545
+  - 741
+  strokes: '110010010000'
+- origin:
+  - 1647
+  - 741
+  strokes: '110110000000'
+- origin:
+  - 1817
+  - 741
+  strokes: '011001110001'
+- origin:
+  - 1988
+  - 741
+  strokes: '010011111110'
+- origin:
+  - 2090
+  - 741
+  strokes: '010010011110'
+- origin:
+  - 2261
+  - 741
+  strokes: '010001110001'
+- origin:
+  - 2363
+  - 741
+  strokes: '010010000110'
+- origin:
+  - 2465
+  - 741
+  strokes: '011001011110'
+- origin:
+  - 2567
+  - 741
+  strokes: '001101110001'

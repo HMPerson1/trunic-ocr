@@ -10,6 +10,16 @@ numpy = "^1.26.4"
 opencv-python = "^4.9.0.80"
 pyodide-py = "==0.26.1"
 
+[tool.poetry.group.test.dependencies]
+pytest = "^8.0.0"
+pytest-golden = "==0.2.2"
+
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]
+
 
 [build-system]
 requires = ["poetry-core"]
