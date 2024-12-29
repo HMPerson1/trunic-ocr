@@ -107,17 +107,19 @@ mat-toolbar {
 .example-inputs-wrapper {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   justify-content: flex-end;
 }
 
 .example-help {
+  text-align: center;
   font: var(--mat-sys-body-large);
   letter-spacing: var(--mat-sys-body-large-tracking);
   padding-block: 8px;
 }
 
 .example-inputs {
+  height: 120px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
