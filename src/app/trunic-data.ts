@@ -59,14 +59,33 @@ export const CONSONANTS_EXAMPLES: ConsonantTab<[MarkedWord] | [MarkedWord, Marke
 
 export type PronunciationSystem = {
     name: string,
+    help: string,
     delimiter: string,
     vowels: VowelTab<string>,
     consonants: ConsonantTab<string>,
 }
 export const PRONUNCIATION_SYSTEMS: ReadonlyArray<PronunciationSystem> = [
-    { name: "Merriam Webster", delimiter: "\\", vowels: VOWELS_MW, consonants: CONSONANTS_MW },
-    { name: "Oxford English Dictionary", delimiter: "/", vowels: VOWELS_OED, consonants: CONSONANTS_OED },
-    { name: "Wikipedia", delimiter: "/", vowels: VOWELS_WP, consonants: CONSONANTS_WP },
+    {
+        name: "Merriam-Webster",
+        help: "https://www.merriam-webster.com/help",
+        delimiter: "\\",
+        vowels: VOWELS_MW,
+        consonants: CONSONANTS_MW,
+    },
+    {
+        name: "Oxford English Dictionary",
+        help: "https://www.oed.com/information/understanding-entries/pronunciation/us-english-pronunciations/",
+        delimiter: "/",
+        vowels: VOWELS_OED,
+        consonants: CONSONANTS_OED
+    },
+    {
+        name: "Wikipedia",
+        help: "https://en.wikipedia.org/wiki/Help:IPA/English",
+        delimiter: "/",
+        vowels: VOWELS_WP,
+        consonants: CONSONANTS_WP
+    },
 ];
 
 type MarkedWord = ReadonlyArray<string>

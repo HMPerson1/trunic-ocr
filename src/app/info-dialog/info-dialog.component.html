@@ -8,9 +8,9 @@
     <p>Created by HMPerson1</p>
     <p>Pronunciation transcription system reference:</p>
     <ul>
-        <li><a href="https://www.merriam-webster.com/help">Merriam-Webster</a></li>
-        <li><a href="https://www.oed.com/information/understanding-entries/pronunciation/us-english-pronunciations/">Oxford English Dictionary</a></li>
-        <li><a href="https://en.wikipedia.org/wiki/Help:IPA/English">Wikipedia</a></li>
+        @for (sys of _PNS; track $index) {
+        <li><a [href]="sys.help">{{ sys.name }}</a></li>
+        }
     </ul>
     <p>
         Built using:
