@@ -6,9 +6,14 @@
 p {
     margin-block: 1.5em;
 
-    &:has(+details) {
+    &:has(+details),
+    &:has(+ul) {
         margin-bottom: 0;
     }
+}
+
+ul {
+    margin: 0;
 }
 
 .dep-logo-line {

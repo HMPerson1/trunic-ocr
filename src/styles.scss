@@ -38,6 +38,10 @@ body {
   color: var(--mat-sys-on-surface);
 }
 
+a {
+  color: var(--mat-sys-primary)
+}
+
 button {
   // https://css-tricks.com/overriding-default-button-styles/
 
