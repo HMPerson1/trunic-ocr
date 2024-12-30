@@ -1,7 +1,7 @@
 <mat-toolbar>
   <span>Trunic OCR</span>
   <mat-form-field appearance="outline" subscriptSizing="dynamic">
-    <mat-label>Pronouciation System</mat-label>
+    <mat-label>Pronunciation System</mat-label>
     <mat-select [(value)]="pronctnSystem">
       @for (sys of _PNS; track $index) {
       <mat-option [value]="sys">{{ sys.name }}</mat-option>

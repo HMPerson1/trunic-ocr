@@ -13,7 +13,7 @@ export class SnackbarErrorHandlerService {
         && typeof error.snackbarMessageOverride === 'string'
       )
         ? error.snackbarMessageOverride
-        : "An unexpected error has occured.";
+        : "An unexpected error has occurred.";
     this.snackBar.open(msg);
   }
 }
