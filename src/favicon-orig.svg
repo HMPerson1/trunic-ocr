@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256">
+    <style>
+        polyline {
+            stroke-width: 16px;
+            stroke: #0f0;
+            stroke-linecap: round;
+            fill: transparent;
+        }
+
+        #a {
+            translate: 15px 61px;
+        }
+    </style>
+
+    <rect y="16" width="240" height="224" />
+    <!-- <rect y="112" width="256" height="16" fill="grey" /> -->
+    <!-- <rect y="144" width="256" height="16" fill="grey" /> -->
+    <!-- <rect x="16" width="16" height="256" fill="grey" /> -->
+    <g id="a">
+        <g>
+            <polyline points="41 8.524791385931977 73 27" />
+            <polyline points="9 27 41 8.524791385931977" />
+            <polyline points="9 27 9 59" />
+            <polyline points="9 88.52479138593198 9 107" />
+            <polyline points="9 107 41 125.47520861406802" />
+            <polyline points="41 125.47520861406802 73 107" />
+            <polyline points="9 59 73 59" />
+        </g>
+        <g style="translate: 64px;">
+            <polyline points="41 45.47520861406802 73 27" />
+            <polyline points="41 8.524791385931977 41 59" />
+            <polyline points="9 107 41 88.52479138593198" />
+            <polyline points="41 45.47520861406802 41 59" />
+            <polyline points="41 88.52479138593198 41 125.47520861406802" />
+            <polyline points="9 27 41 8.524791385931977" />
+            <polyline points="9 27 9 59" />
+            <polyline points="9 88.52479138593198 9 107" />
+            <polyline points="9 107 41 125.47520861406802" />
+            <polyline points="41 125.47520861406802 73 107" />
+            <polyline points="9 59 73 59" />
+        </g>
+        <g style="translate: 128px;">
+            <polyline points="41 8.524791385931977 73 27" />
+            <polyline points="9 27 41 8.524791385931977" />
+            <polyline points="9 107 41 125.47520861406802" />
+            <polyline points="41 125.47520861406802 73 107" />
+            <polyline points="9 59 73 59" />
+        </g>
+    </g>
+</svg>
