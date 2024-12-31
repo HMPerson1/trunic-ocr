@@ -6,10 +6,11 @@ import type { PyWorkError, PyWorkProgress, PyWorkRef, PyWorkRequest, PyWorkRespo
   providedIn: 'root'
 })
 export class PyworkService {
-  readonly worker = new Worker(new URL("./pywork.worker.ts", import.meta.url));
+  readonly worker = (typeof Worker !== 'undefined' && new Worker(new URL("./pywork.worker.ts", import.meta.url))) as Worker;
   readonly #activeRequests = new Map<number, RequestEntry>();
 
   constructor() {
+    if (!this.worker) return;
     this.worker.onerror = (ev) => {
       console.error("worker error", ev);
       const err = new Error("worker error", { cause: ev })
