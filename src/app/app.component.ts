@@ -61,10 +61,13 @@ export class AppComponent {
       this.imageRenderable.set(cvs.transferToImageBitmap());
     })()
     this.recognizedGlyphs.set([default_glyph_geometry as GlyphGeometry,
-    Array.from({ length: 24 }, (_v, i) => ({
-      origin: [10 + (i % 6) * gbb_width, 10 + Math.floor(i / 6) * gbb_height],
-      strokes: trunic_data.CNSNT_LUT.findIndex(x => x === i)
-    }))])
+    [
+      {origin: [0, 0], strokes: trunic_data.VOWEL_LUT.findIndex(v => v == 16) << 6},
+      {origin: [default_glyph_geometry.glyph_width, 0], strokes: trunic_data.CNSNT_LUT.findIndex(v => v == 15) | trunic_data.VOWEL_LUT.findIndex(v => v == 6) << 6},
+      {origin: [default_glyph_geometry.glyph_width * 2, 0], strokes: trunic_data.VOWEL_LUT.findIndex(v => v == 10) << 6},
+
+    ]
+  ])
   }
 
   async handleData(data: DataTransfer) {
