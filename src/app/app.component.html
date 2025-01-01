@@ -55,7 +55,7 @@
               @for (ext of v.smallest; track $index) {
               <source [srcset]="'example-images/small/' + v.path + ext" [type]="ext | imageExtToMimeType" />
               }
-              <img [src]="'example-images/small/' + v.path + '.png'" alt="image of trunic text" />
+              <img [src]="'example-images/small/' + v.path + '.png'" alt="image of trunic text" draggable="false" />
             </picture>
           </button>
           }
