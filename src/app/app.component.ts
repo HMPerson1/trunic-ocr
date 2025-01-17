@@ -1,6 +1,6 @@
 import { Overlay, type OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -10,6 +10,11 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltip } from '@angular/material/tooltip';
 import { fileOpen } from 'browser-fs-access';
+import * as Cause from "effect/Cause";
+import * as E from "effect/Effect";
+import * as Exit from "effect/Exit";
+import * as Fiber from "effect/Fiber";
+import * as Scope from 'effect/Scope';
 import { example_inputs } from './example-inputs.json';
 import { ImageExtToMimeTypePipe } from './image-ext-to-mime-type.pipe';
 import { ImageRendererCanvasComponent } from './image-renderer-canvas/image-renderer-canvas.component';
@@ -32,12 +37,11 @@ import { TrunicGlyphComponent } from './trunic-glyph/trunic-glyph.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent {
-  readonly hasInputImage = signal(false);
-  readonly imageRenderable = signal<ImageBitmap | undefined>(undefined);
-  readonly ocrProgress = signal<undefined | number>(undefined);
-  readonly recognizedGlyphs = signal<[GlyphGeometry, { strokes: number, origin: [number, number] }[]] | undefined>(undefined);
+  readonly hasInputImage = computed(() => this.autoOcrState() !== undefined);
+  readonly imageRenderable = computed(() => this.autoOcrState()?.state.imageRenderable());
+  readonly ocrProgress = computed(() => this.autoOcrState()?.state.ocrProgress());
+  readonly recognizedGlyphs = computed(() => this.autoOcrState()?.state.recognizedGlyphs());
   readonly dragActive = signal(false);
-  cancelCurrentOcr?: () => Promise<void> = undefined;
 
   readonly _PNS = PRONUNCIATION_SYSTEMS;
   readonly pronctnSystem = signal(PRONUNCIATION_SYSTEMS[0]);
@@ -56,97 +60,39 @@ export class AppComponent {
     this.startOcr(blob[0]);
   }
 
-  async startOcr(blob_: Promise<Blob>) {
-    this.hasInputImage.set(true);
-    this.imageRenderable.set(undefined);
-    this.ocrProgress.set(undefined);
-    this.recognizedGlyphs.set(undefined);
+  readonly autoOcrState = signal<{ state: AutoOcrState, fiber: Fiber.RuntimeFiber<void, any>, scope: Scope.CloseableScope } | undefined>(undefined);
+
+  startOcr(blob_: Promise<Blob>) {
     this.currentOverlay?.[1].dispose();
 
-    let resolveCancel: ((v: undefined) => void) | undefined;
-    const lastCancelCurrentOcr = this.cancelCurrentOcr;
-    this.cancelCurrentOcr = () => new Promise(resolve => resolveCancel = resolve);
+    const prevState = this.autoOcrState();
+    const stopPrevFiber = E.runFork(E.uninterruptible(E.gen(function* () {
+      const { fiber, scope } = yield* E.fromNullable(prevState);
+      const exit = yield* Fiber.interrupt(fiber);
+      yield* Scope.close(scope, exit);
+    })));
 
-    if (lastCancelCurrentOcr) {
-      await lastCancelCurrentOcr();
-      if (resolveCancel) {
-        resolveCancel(undefined);
-        return;
+    const state = new AutoOcrState();
+    const scope = E.runSync(Scope.make());
+    const fiber = E.runFork(E.gen(this, function* () {
+      yield* E.uninterruptible(stopPrevFiber.await);
+      yield* Scope.extend(doAutoOcr(this.pywork, state, blob_), scope);
+    }));
+    this.autoOcrState.set({ state, fiber, scope });
+
+    fiber.addObserver(e => {
+      if (Exit.isFailure(e) && !Exit.isInterrupted(e)) {
+        // clear state on image-load failure
+        const prevState = this.autoOcrState();
+        if (prevState?.fiber === fiber && prevState.state.imageRenderable() === undefined) {
+          this.autoOcrState.set(undefined);
+          E.runFork(Scope.close(scope, Exit.void));
+        }
+
+        // make sure errors get logged
+        Promise.reject(e.cause);
       }
-      this.ocrProgress.set(undefined);
-      this.recognizedGlyphs.set(undefined);
-    }
-
-    const blob = await blob_;
-
-    // race python-opencv decode and browser decode
-    const browserDecodeP = createImageBitmap(blob);
-    const pyDecodeP = this.pywork.decodeImage(blob);
-    const bitmapDisplay = await (async () => {
-      try {
-        return await browserDecodeP;
-      } catch (e) {
-        console.warn("browser could not decode image", e);
-      }
-      const pyDecodeResult = await pyDecodeP;
-      if (pyDecodeResult != null) {
-        return await this.pywork.decoded2bitmap(pyDecodeResult);
-      }
-      throw new Error("could not decode image");
-    })();
-    this.imageRenderable.set(bitmapDisplay);
-
-    // if we get here, at least one decode succeeded
-    const pyImage = await pyDecodeP ?? await this.pywork.loadBitmap(await browserDecodeP);
-    try {
-      if (resolveCancel) {
-        resolveCancel(undefined);
-        return;
-      }
-
-      const [ocrProgress, cancel] = this.pywork.oneshotRecognize(pyImage);
-      const ocrDone = Promise.withResolvers<void>();
-      const ocrProgressSub = ocrProgress.subscribe({
-        next: ([p, v]) => {
-          this.ocrProgress.set(p * 100);
-          if (v === undefined) return;
-          switch (v.t) {
-            case 0:
-              this.recognizedGlyphs.set([v.v, []]);
-              break;
-            case 1:
-              this.recognizedGlyphs.update(prev => prev == null ? prev : [prev[0], [...prev[1], {
-                origin: v.v.origin,
-                strokes: (v.v.strokes[1] << 8) | v.v.strokes[0]
-              }]]);
-              break;
-            default:
-              const _a: never = v;
-          }
-        },
-        error: ocrDone.reject,
-        complete: ocrDone.resolve,
-      });
-
-      let wasCancelled = false;
-      const thisCancelCurrentOcr = async () => {
-        wasCancelled = true;
-        await cancel();
-        try { await ocrDone.promise; } catch { }
-      };
-      this.cancelCurrentOcr = thisCancelCurrentOcr;
-
-      try {
-        await ocrDone.promise;
-      } catch (e) {
-        if (!wasCancelled) throw e;
-      } finally {
-        if (this.cancelCurrentOcr === thisCancelCurrentOcr) this.cancelCurrentOcr = undefined;
-        ocrProgressSub.unsubscribe();
-      }
-    } finally {
-      await this.pywork.destroy(pyImage);
-    }
+    });
   }
 
   onImgDrop(event: DragEvent) {
@@ -262,3 +208,73 @@ async function getImageDataBlobFromDataTransfer(data: DataTransfer): Promise<[Pr
   }
   return undefined;
 }
+
+type Glyph = { strokes: number, origin: [number, number] };
+class AutoOcrState {
+  readonly imageRenderable = signal<ImageBitmap | undefined>(undefined);
+  readonly ocrProgress = signal<undefined | number>(undefined);
+  readonly recognizedGlyphs = signal<[GlyphGeometry, ReadonlyArray<Glyph>] | undefined>(undefined);
+}
+
+const doAutoOcr = (pywork: PyworkService, state: AutoOcrState, blob_: Promise<Blob>) => E.gen(function* () {
+  const blob = yield* E.promise(() => blob_);
+
+  // race python-opencv decode and browser decode
+  const browserDecodeP = E.acquireRelease(
+    E.tapError(
+      E.tryPromise(() => createImageBitmap(blob)),
+      e => E.succeed(console.warn("browser could not decode image", e.cause))),
+    b => E.succeed(b.close()),
+  );
+  const pyDecodeP = E.acquireRelease(
+    E.tryPromise(() => pywork.decodeImage(blob)),
+    r => E.promise(() => pywork.destroy(r)),
+  );
+
+  const [browserDecodeR, pyDecodeR] = yield* E.all([browserDecodeP, pyDecodeP], { mode: 'either', concurrency: 'unbounded' });
+  const [bitmapDisplay, pyImage] = yield* E.matchEffect(browserDecodeR, {
+    onSuccess: browserDecode => E.matchEffect(pyDecodeR, {
+      onSuccess: pyDecode =>
+        E.succeed([browserDecode, pyDecode] as const),
+      onFailure: () => E.map(
+        E.acquireRelease(
+          E.promise(() => pywork.loadBitmap(browserDecode)),
+          r => E.promise(() => pywork.destroy(r)),
+        ),
+        pyImage => [browserDecode, pyImage] as const),
+    }),
+    onFailure: be => E.matchEffect(pyDecodeR, {
+      onSuccess: pyDecode => E.map(
+        E.acquireRelease(
+          E.promise(() => pywork.decoded2bitmap(pyDecode)),
+          b => E.succeed(b.close()),
+        ),
+        bitmapDisplay => [bitmapDisplay, pyDecode] as const
+      ),
+      onFailure: pe =>
+        E.failCause(Cause.parallel(Cause.fail(be), Cause.fail(pe))),
+    }),
+  });
+
+  state.imageRenderable.set(bitmapDisplay);
+
+  yield* E.tryPromise(abortSig =>
+    pywork.oneshotRecognize(pyImage, abortSig).forEach(([p, v]) => {
+      state.ocrProgress.set(p * 100);
+      if (v === undefined) return;
+      switch (v.t) {
+        case 0:
+          state.recognizedGlyphs.set([v.v, []]);
+          break;
+        case 1:
+          state.recognizedGlyphs.update(prev => prev == null ? prev : [prev[0], [...prev[1], {
+            origin: v.v.origin,
+            strokes: (v.v.strokes[1] << 8) | v.v.strokes[0]
+          }]]);
+          break;
+        default:
+          const _a: never = v;
+      }
+    })
+  );
+});

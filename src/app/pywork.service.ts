@@ -53,10 +53,10 @@ export class PyworkService {
     }
   }
 
-  decodeImage(imgBlob: Blob): Promise<PyDecodedImageRef | undefined> {
+  decodeImage(imgBlob: Blob): Promise<PyDecodedImageRef> {
     const reqId = genReqId();
-    const { promise, resolve } = Promise.withResolvers();
-    this.#activeRequests.set(reqId, { resolve, progress: undefined, reject: undefined });
+    const { promise, resolve, reject } = Promise.withResolvers();
+    this.#activeRequests.set(reqId, { resolve, progress: undefined, reject });
     const msg: PyWorkRequest = { id: reqId, name: 'decodeImage', data: imgBlob };
     this.worker.postMessage(msg);
     return promise as Promise<PyDecodedImageRef>;
@@ -80,16 +80,18 @@ export class PyworkService {
     return promise as Promise<PyDecodedImageRef>;
   }
 
-  oneshotRecognize(imgRef: PyDecodedImageRef): [Observable<[number, { t: 0, v: GlyphGeometry } | { t: 1, v: RecognizedGlyph } | undefined]>, () => Promise<void>] {
+  oneshotRecognize(imgRef: PyDecodedImageRef, signal: AbortSignal): Observable<[number, { t: 0, v: GlyphGeometry } | { t: 1, v: RecognizedGlyph } | undefined]> {
     const reqId = genReqId();
     const progOut = new Subject<any>();
-    const { promise, resolve, reject } = Promise.withResolvers();
-    promise.then(() => progOut.complete(), e => progOut.error(e));
-    this.#activeRequests.set(reqId, { resolve, progress: v => progOut.next((v as any)), reject });
+    this.#activeRequests.set(reqId, {
+      resolve: () => progOut.complete(),
+      progress: v => progOut.next((v as any)),
+      reject: e => progOut.error(e),
+    });
     const msg: PyWorkRequest = { id: reqId, name: 'oneshotRecognize', data: imgRef };
     this.worker.postMessage(msg);
-    const cancel = async () => { await this.interrupt(reqId); try { await promise; } catch { } }
-    return [progOut.asObservable(), cancel];
+    signal.addEventListener('abort', () => this.interrupt(reqId));
+    return progOut.asObservable();
   }
 
   destroy(imgRef: PyDecodedImageRef): Promise<void> {

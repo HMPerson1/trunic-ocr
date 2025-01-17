@@ -37,18 +37,21 @@ const proxyStore = new (class {
   }
 })();
 
-const pendingInterrupts = new Set<number>();
+const runningTasks = new Set<number>();
 
 onmessage = async ({ data }: { data: PyWorkRequest }) => {
   switch (data.name) {
     case 'decodeImage': {
       const [py, pypkg] = await init;
       const pynparr1: PyBuffer | undefined = pypkg.decodeImage(py.toPy(await (data.data as Blob).arrayBuffer()));
-      if (pynparr1 == null) {
+      if (pynparr1 != null) {
+        const msg: PyWorkResponse = { type: 'r', id: data.id, data: proxyStore.add(pynparr1) };
+        postMessage(msg);
+      } else {
         console.warn("opencv could not decode image");
+        const msg: PyWorkError = { type: 'e', id: data.id, data: undefined };
+        postMessage(msg);
       }
-      const msg: PyWorkResponse = { type: 'r', id: data.id, data: pynparr1 != null ? proxyStore.add(pynparr1) : undefined };
-      postMessage(msg);
       return;
     }
     case 'decoded2bitmap': {
@@ -78,6 +81,7 @@ onmessage = async ({ data }: { data: PyWorkRequest }) => {
     }
     case 'oneshotRecognize': {
       const [py, pypkg] = await init;
+      runningTasks.add(data.id);
       const interruptedToken = Symbol();
       try {
         await impl_oneshotRecognize(py, pypkg, data.data as any, mkPostProgress(data.id, interruptedToken));
@@ -92,6 +96,8 @@ onmessage = async ({ data }: { data: PyWorkRequest }) => {
           const msg: PyWorkError = { type: 'e', id: data.id, data: String(e) };
           postMessage(msg);
         }
+      } finally {
+        runningTasks.delete(data.id);
       }
       return;
     }
@@ -106,7 +112,9 @@ onmessage = async ({ data }: { data: PyWorkRequest }) => {
       break;
     }
     case 'interrupt': {
-      pendingInterrupts.add(data.data as number);
+      if (!runningTasks.delete(data.data as number)) {
+        console.warn("attempted to interrupt non-running pywork task", data.data)
+      }
       const msg: PyWorkResponse = { type: 'r', id: data.id, data: undefined };
       postMessage(msg);
       break;
@@ -120,9 +128,13 @@ async function impl_oneshotRecognize(_py: PyodideInterface, pypkg: any, data: Py
   try {
     await impl_oneshotRecognize_real(_py, pypkg, data, false, postProgress);
   } catch (e) {
-    console.warn("python exception; retrying");
-    console.warn(e);
-    await impl_oneshotRecognize_real(_py, pypkg, data, true, postProgress);
+    if (e instanceof _py.ffi.PythonError) {
+      console.warn("python exception; retrying");
+      console.warn(e);
+      await impl_oneshotRecognize_real(_py, pypkg, data, true, postProgress);
+    } else {
+      throw e;
+    }
   }
 }
 
@@ -199,7 +211,7 @@ const mkPostProgress = (id: number, interruptedToken: unknown): PostProgressFn =
   if (alsoYield) {
     return (async () => {
       await new Promise(resolve => setTimeout(resolve));
-      if (pendingInterrupts.delete(id)) throw interruptedToken;
+      if (!runningTasks.has(id)) throw interruptedToken;
     })();
   }
   return;
