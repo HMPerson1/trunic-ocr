@@ -1,6 +1,6 @@
 import { Overlay, type OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -10,6 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltip } from '@angular/material/tooltip';
 import { fileOpen } from 'browser-fs-access';
+import { pipe } from 'effect';
 import * as Cause from "effect/Cause";
 import * as E from "effect/Effect";
 import * as Exit from "effect/Exit";
@@ -19,7 +20,7 @@ import { example_inputs } from './example-inputs.json';
 import { ImageExtToMimeTypePipe } from './image-ext-to-mime-type.pipe';
 import { ImageRendererCanvasComponent } from './image-renderer-canvas/image-renderer-canvas.component';
 import { InfoDialogComponent } from './info-dialog/info-dialog.component';
-import { PyworkService, type GlyphGeometry } from './pywork.service';
+import { PyworkService, type GlyphGeometry, type PyDecodedImageRef } from './pywork.service';
 import { PRONUNCIATION_SYSTEMS } from './trunic-data';
 import { TrunicGlyphDetailComponent } from './trunic-glyph-detail/trunic-glyph-detail.component';
 import { TrunicGlyphComponent } from './trunic-glyph/trunic-glyph.component';
@@ -211,46 +212,36 @@ class AutoOcrState {
 }
 
 const doAutoOcr = (pywork: PyworkService, state: AutoOcrState, blob_: Promise<Blob>) => E.gen(function* () {
+  const pyworkResource = E.acquireRelease((r: PyDecodedImageRef) => E.promise(() => pywork.destroy(r)));
+
   const blob = yield* E.promise(() => blob_);
 
   // race python-opencv decode and browser decode
-  const browserDecodeP = E.acquireRelease(
+  const browserDecodeP = yield* E.fork(bitmapResource(
     E.tapError(
       E.tryPromise(() => createImageBitmap(blob)),
-      e => E.succeed(console.warn("browser could not decode image", e.cause))),
-    b => E.succeed(b.close()),
-  );
-  const pyDecodeP = E.acquireRelease(
-    E.tryPromise(() => pywork.decodeImage(blob)),
-    r => E.promise(() => pywork.destroy(r)),
-  );
+      e => E.succeed(console.warn("browser could not decode image", e.cause)))
+  ));
+  const pyDecodeP = yield* E.fork(pyworkResource(E.tryPromise(() => pywork.decodeImage(blob))));
 
-  const [browserDecodeR, pyDecodeR] = yield* E.all([browserDecodeP, pyDecodeP], { mode: 'either', concurrency: 'unbounded' });
-  const [bitmapDisplay, pyImage] = yield* E.matchEffect(browserDecodeR, {
-    onSuccess: browserDecode => E.matchEffect(pyDecodeR, {
-      onSuccess: pyDecode =>
-        E.succeed([browserDecode, pyDecode] as const),
-      onFailure: () => E.map(
-        E.acquireRelease(
-          E.promise(() => pywork.loadBitmap(browserDecode)),
-          r => E.promise(() => pywork.destroy(r)),
-        ),
-        pyImage => [browserDecode, pyImage] as const),
-    }),
-    onFailure: be => E.matchEffect(pyDecodeR, {
-      onSuccess: pyDecode => E.map(
-        E.acquireRelease(
-          E.promise(() => pywork.decoded2bitmap(pyDecode)),
-          b => E.succeed(b.close()),
-        ),
-        bitmapDisplay => [bitmapDisplay, pyDecode] as const
-      ),
-      onFailure: pe =>
-        E.failCause(Cause.parallel(Cause.fail(be), Cause.fail(pe))),
-    }),
-  });
+  const setDisplayP = yield* E.fork(pipe(
+    Fiber.join(browserDecodeP),
+    E.catchAll(e1 => pipe(
+      Fiber.join(pyDecodeP),
+      E.flatMap(pyDecode => bitmapResource(E.promise(() => pywork.decoded2bitmap(pyDecode)))),
+      E.mapErrorCause(e2 => Cause.parallel(Cause.fail(e1), e2)),
+    )),
+    E.map(v => state.imageRenderable.set(v)),
+  ));
 
-  state.imageRenderable.set(bitmapDisplay);
+  const pyImage = yield* E.catchAll(
+    Fiber.join(pyDecodeP),
+    e1 => pipe(
+      Fiber.join(browserDecodeP),
+      E.flatMap(browserDecode => pyworkResource(E.promise(() => pywork.loadBitmap(browserDecode)))),
+      E.mapErrorCause(e2 => Cause.parallel(Cause.fail(e1), e2)),
+    ),
+  );
 
   yield* E.tryPromise(abortSig =>
     pywork.oneshotRecognize(pyImage, abortSig).forEach(([p, v]) => {
@@ -271,4 +262,8 @@ const doAutoOcr = (pywork: PyworkService, state: AutoOcrState, blob_: Promise<Bl
       }
     })
   );
+
+  yield* setDisplayP.await;
 });
+
+const bitmapResource = E.acquireRelease((b: ImageBitmap) => E.succeed(b.close()));
