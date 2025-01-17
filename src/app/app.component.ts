@@ -37,14 +37,9 @@ import { TrunicGlyphComponent } from './trunic-glyph/trunic-glyph.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent {
-  readonly hasInputImage = computed(() => this.autoOcrState() !== undefined);
-  readonly imageRenderable = computed(() => this.autoOcrState()?.state.imageRenderable());
-  readonly ocrProgress = computed(() => this.autoOcrState()?.state.ocrProgress());
-  readonly recognizedGlyphs = computed(() => this.autoOcrState()?.state.recognizedGlyphs());
   readonly dragActive = signal(false);
-
-  readonly _PNS = PRONUNCIATION_SYSTEMS;
   readonly pronctnSystem = signal(PRONUNCIATION_SYSTEMS[0]);
+  readonly autoOcrState = signal<{ state: AutoOcrState, fiber: Fiber.RuntimeFiber<void, any>, scope: Scope.CloseableScope } | undefined>(undefined);
 
   constructor(
     private readonly pywork: PyworkService,
@@ -59,8 +54,6 @@ export class AppComponent {
     }
     this.startOcr(blob[0]);
   }
-
-  readonly autoOcrState = signal<{ state: AutoOcrState, fiber: Fiber.RuntimeFiber<void, any>, scope: Scope.CloseableScope } | undefined>(undefined);
 
   startOcr(blob_: Promise<Blob>) {
     this.currentOverlay?.[1].dispose();
@@ -148,9 +141,8 @@ export class AppComponent {
 
   currentOverlay: [EventTarget, OverlayRef] | undefined = undefined;
 
-  onGlyphToggle(event: Event, glyphIndex: number) {
-    const glyphs = this.recognizedGlyphs();
-    if (glyphs !== undefined && event.target != null && (event as ToggleEvent).newState === 'open') {
+  onGlyphToggle(event: Event, glyphStrokes: number) {
+    if (event.target != null && (event as ToggleEvent).newState === 'open') {
       this.currentOverlay?.[1].dispose();
       const overlayRef = this.cdkOverlay.create({
         positionStrategy: this.cdkOverlay.position()
@@ -162,7 +154,7 @@ export class AppComponent {
           .withFlexibleDimensions(false),
       });
       const compRef = overlayRef.attach(new ComponentPortal(TrunicGlyphDetailComponent));
-      compRef.setInput('strokesPacked', glyphs[1][glyphIndex].strokes);
+      compRef.setInput('strokesPacked', glyphStrokes);
       compRef.setInput('pronctnSystem', this.pronctnSystem());
       this.currentOverlay = [event.target, overlayRef];
     } else if (this.currentOverlay && event.target === this.currentOverlay[0]) {
@@ -174,7 +166,8 @@ export class AppComponent {
     this.matDialog.open(InfoDialogComponent, { autoFocus: 'dialog' });
   }
 
-  _EXAMPLE_INPUTS = example_inputs;
+  readonly _PNS = PRONUNCIATION_SYSTEMS;
+  readonly _EXAMPLE_INPUTS = example_inputs;
 }
 
 async function getImageDataBlobFromDataTransfer(data: DataTransfer): Promise<[Promise<Blob>] | undefined> {
@@ -213,7 +206,8 @@ type Glyph = { strokes: number, origin: [number, number] };
 class AutoOcrState {
   readonly imageRenderable = signal<ImageBitmap | undefined>(undefined);
   readonly ocrProgress = signal<undefined | number>(undefined);
-  readonly recognizedGlyphs = signal<[GlyphGeometry, ReadonlyArray<Glyph>] | undefined>(undefined);
+  readonly recognizedGeometry = signal<GlyphGeometry | undefined>(undefined);
+  readonly recognizedGlyphs = signal<ReadonlyArray<Glyph>>([]);
 }
 
 const doAutoOcr = (pywork: PyworkService, state: AutoOcrState, blob_: Promise<Blob>) => E.gen(function* () {
@@ -264,13 +258,13 @@ const doAutoOcr = (pywork: PyworkService, state: AutoOcrState, blob_: Promise<Bl
       if (v === undefined) return;
       switch (v.t) {
         case 0:
-          state.recognizedGlyphs.set([v.v, []]);
+          state.recognizedGeometry.set(v.v);
           break;
         case 1:
-          state.recognizedGlyphs.update(prev => prev == null ? prev : [prev[0], [...prev[1], {
+          state.recognizedGlyphs.update(prev => [...prev, {
             origin: v.v.origin,
             strokes: (v.v.strokes[1] << 8) | v.v.strokes[0]
-          }]]);
+          }]);
           break;
         default:
           const _a: never = v;

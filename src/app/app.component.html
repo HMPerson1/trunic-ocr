@@ -11,21 +11,22 @@
   <span class="toolbar-spacer"></span>
   <button mat-icon-button matTooltip="About" (click)="openInfoDialog()"><mat-icon>info</mat-icon></button>
 </mat-toolbar>
-<mat-progress-bar [mode]="hasInputImage() && ocrProgress() === undefined ? 'query' : 'determinate'"
-  [value]="ocrProgress()"></mat-progress-bar>
+@let autoOcrState_ = autoOcrState()?.state;
+<mat-progress-bar [mode]="autoOcrState_ && autoOcrState_.ocrProgress() === undefined ? 'query' : 'determinate'"
+  [value]="autoOcrState()?.state?.ocrProgress()"></mat-progress-bar>
 <div class="content">
   <div class="img-drop-container" #dropZone (drop)="onImgDrop($event)" (dragover)="onImgOver($event)"
     (dragleave)="!dropZone.contains($any($event.relatedTarget)) && dragActive.set(false)"
     (dragenter)="dragActive.set(true)">
-    @if (imageRenderable() !== undefined) {
-    <canvas app-image-renderer-canvas class="img-display" [data]="imageRenderable()!"
+    @if (autoOcrState_) {
+    @if (autoOcrState_.imageRenderable(); as imageRenderable_) {
+    <canvas app-image-renderer-canvas class="img-display" [data]="imageRenderable_"
       #imgDisplay="app-image-renderer-canvas"></canvas>
-    @if (recognizedGlyphs(); as recognizedGlyphs) {
-    @let geometry = recognizedGlyphs[0];
+    @if (autoOcrState_.recognizedGeometry(); as geometry) {
     <div class="glyphs-container" [style.transform]="imgDisplay.imgTransform().scale(1/geometry.upscale)">
-      @for (glyph of recognizedGlyphs[1]; track $index) {
+      @for (glyph of autoOcrState_.recognizedGlyphs(); track $index) {
       <details name="glyph" [style.top.px]="glyph.origin[1]" [style.left.px]="glyph.origin[0]"
-        (toggle)="onGlyphToggle($event, $index)">
+        (toggle)="onGlyphToggle($event, glyph.strokes)">
         <summary>
           <app-trunic-glyph [geometry]="geometry" [pronctnSystem]="pronctnSystem()" [strokesPacked]="glyph.strokes" />
         </summary>
@@ -34,10 +35,10 @@
     </div>
     }
     } @else {
+    <div class="loading-text">Loading image...</div>
+    }
+    } @else {
     <div class="img-drop-help">
-      @if (hasInputImage()) {
-      <span class="help-contents">Loading image...</span>
-      } @else {
       <div></div>
       <div class="help-contents">
         <div>Drag and drop an image here</div>
@@ -61,7 +62,6 @@
           }
         </div>
       </div>
-      }
     </div>
     }
     <div class="img-drop-indicator" [class.img-drop-active]="dragActive()"> </div>
