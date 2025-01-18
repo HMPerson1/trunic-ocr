@@ -3,7 +3,7 @@ import { MAT_ICON_DEFAULT_OPTIONS } from '@angular/material/icon';
 import { MAT_SNACK_BAR_DEFAULT_OPTIONS } from '@angular/material/snack-bar';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { SnackbarErrorHandlerService } from './snackbar-error-handler.service';
+import { SnackbarErrorHandlerService } from './misc/snackbar-error-handler.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [

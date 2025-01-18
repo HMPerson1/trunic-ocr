@@ -1,6 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { GlyphGeometry } from '../pywork.service';
+import { GlyphGeometry } from '../ocr-manager/pywork.service';
 import * as trunic_data from '../trunic-data';
 import { TrunicGlyphImageComponent } from "../trunic-glyph-image/trunic-glyph-image.component";
 

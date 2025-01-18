@@ -1,5 +1,5 @@
 import { Component, computed, input } from '@angular/core';
-import type { GlyphGeometry } from '../pywork.service';
+import type { GlyphGeometry } from '../ocr-manager/pywork.service';
 
 @Component({
   selector: 'app-trunic-glyph-image',
