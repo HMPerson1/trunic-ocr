@@ -1,5 +1,6 @@
 <mat-toolbar>
   <span>Trunic OCR</span>
+  @defer (on immediate; hydrate on immediate) {
   <mat-form-field appearance="outline" subscriptSizing="dynamic">
     <mat-label>Pronunciation System</mat-label>
     <mat-select [(value)]="pronctnSystem">
@@ -9,11 +10,12 @@
     </mat-select>
   </mat-form-field>
   <span class="toolbar-spacer"></span>
-  <button mat-icon-button matTooltip="About" (click)="openInfoDialog()"><mat-icon>info</mat-icon></button>
+  <button mat-icon-button appInfoDialogOpenButton matTooltip="About"><mat-icon>info</mat-icon></button>
+  }
 </mat-toolbar>
-@let autoOcrState_ = autoOcrState()?.state;
+@let autoOcrState_ = autoOcrState();
 <mat-progress-bar [mode]="autoOcrState_ && autoOcrState_.ocrProgress() === undefined ? 'query' : 'determinate'"
-  [value]="autoOcrState()?.state?.ocrProgress()"></mat-progress-bar>
+  [value]="autoOcrState_?.ocrProgress() ?? 0" />
 <div class="content">
   <div class="img-drop-container" #dropZone (drop)="onImgDrop($event)" (dragover)="onImgOver($event)"
     (dragleave)="!dropZone.contains($any($event.relatedTarget)) && dragActive.set(false)"
@@ -22,17 +24,11 @@
     @if (autoOcrState_.imageRenderable(); as imageRenderable_) {
     <canvas app-image-renderer-canvas class="img-display" [data]="imageRenderable_"
       #imgDisplay="app-image-renderer-canvas"></canvas>
+    @defer (on immediate) {
     @if (autoOcrState_.recognizedGeometry(); as geometry) {
-    <div class="glyphs-container" [style.transform]="imgDisplay.imgTransform().scale(1/geometry.upscale)">
-      @for (glyph of autoOcrState_.recognizedGlyphs(); track $index) {
-      <details name="glyph" [style.top.px]="glyph.origin[1]" [style.left.px]="glyph.origin[0]"
-        (toggle)="onGlyphToggle($event, glyph.strokes)">
-        <summary>
-          <app-trunic-glyph [geometry]="geometry" [pronctnSystem]="pronctnSystem()" [strokesPacked]="glyph.strokes" />
-        </summary>
-      </details>
-      }
-    </div>
+    <app-ocr-overlay [geometry]="geometry" [glyphs]="autoOcrState_.recognizedGlyphs()" [pronctnSystem]="pronctnSystem()"
+      [style.transform]="imgDisplay.imgTransform().scale(1/geometry.upscale)" />
+    }
     }
     } @else {
     <div class="loading-text">Loading image...</div>
@@ -45,7 +41,9 @@
         <div class="help-or">or</div>
         <div>Paste an image from the clipboard</div>
         <div class="help-or">or</div>
+        @defer (on immediate; hydrate on immediate) {
         <button mat-flat-button (click)="browseImage()">Browse for an image...</button>
+        }
       </div>
       <div class="example-inputs-wrapper">
         <div class="example-help">or, try one of these:</div>

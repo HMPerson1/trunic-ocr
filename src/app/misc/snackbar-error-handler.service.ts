@@ -1,19 +1,15 @@
-import { Injectable } from '@angular/core';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { Injectable, Injector } from '@angular/core';
+import type { MatSnackBar } from '@angular/material/snack-bar';
 
 @Injectable()
 export class SnackbarErrorHandlerService {
-  constructor(private readonly snackBar: MatSnackBar) { }
-  handleError(error: unknown): void {
+  readonly #snackBarP: Promise<MatSnackBar>;
+  constructor(injector: Injector) {
+    this.#snackBarP = (async () => injector.get((await import('@angular/material/snack-bar')).MatSnackBar))();
+  }
+  handleError(error: any): void {
     console.error("ERROR", error);
-    const msg =
-      (typeof error === 'object'
-        && error != null
-        && 'snackbarMessageOverride' in error
-        && typeof error.snackbarMessageOverride === 'string'
-      )
-        ? error.snackbarMessageOverride
-        : "An unexpected error has occurred.";
-    this.snackBar.open(msg);
+    const msg = error?.snackbarMessageOverride ?? "An unexpected error has occurred.";
+    this.#snackBarP.then(b => b.open(msg, undefined, { duration: 5000 }));
   }
 }

@@ -1,33 +1,24 @@
-import { Overlay, type OverlayRef } from '@angular/cdk/overlay';
-import { ComponentPortal } from '@angular/cdk/portal';
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDialog } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSelectModule } from '@angular/material/select';
-import { MatToolbarModule } from '@angular/material/toolbar';
+import { ChangeDetectionStrategy, Component, Injector, computed, signal } from '@angular/core';
+import { MatButton, MatIconButton } from '@angular/material/button';
+import { MatFormField, MatLabel } from '@angular/material/form-field';
+import { MatIcon } from '@angular/material/icon';
+import { MatProgressBar } from '@angular/material/progress-bar';
+import { MatOption, MatSelect } from '@angular/material/select';
+import { MatToolbar } from '@angular/material/toolbar';
 import { MatTooltip } from '@angular/material/tooltip';
 import { fileOpen } from 'browser-fs-access';
-import { pipe } from 'effect';
-import * as Cause from "effect/Cause";
-import * as E from "effect/Effect";
-import * as Exit from "effect/Exit";
-import * as Fiber from "effect/Fiber";
-import * as Scope from 'effect/Scope';
 import { example_inputs } from './example-inputs.json';
 import { ImageRendererCanvasComponent } from './image-renderer-canvas/image-renderer-canvas.component';
-import { InfoDialogComponent } from './info-dialog/info-dialog.component';
+import { InfoDialogOpenButtonDirective } from './info-dialog/info-dialog-open-button.directive';
 import { ImageExtToMimeTypePipe } from './misc/image-ext-to-mime-type.pipe';
-import { PyworkService, type GlyphGeometry, type PyDecodedImageRef } from './ocr-manager/pywork.service';
+import type { AutoOcrState, OcrManagerService } from './ocr-manager/ocr-manager.service';
+import { PyworkService } from './ocr-manager/pywork.service';
+import { OcrOverlayComponent } from "./ocr-overlay/ocr-overlay.component";
 import { PRONUNCIATION_SYSTEMS } from './trunic-data';
-import { TrunicGlyphDetailComponent } from './trunic-glyph-detail/trunic-glyph-detail.component';
-import { TrunicGlyphComponent } from './trunic-glyph/trunic-glyph.component';
 
 @Component({
   selector: 'app-root',
-  imports: [ImageRendererCanvasComponent, TrunicGlyphComponent, MatToolbarModule, MatIconModule, MatButtonModule, MatProgressBarModule, MatFormFieldModule, MatSelectModule, MatTooltip, ImageExtToMimeTypePipe],
+  imports: [ImageRendererCanvasComponent, MatToolbar, MatIcon, MatButton, MatIconButton, MatProgressBar, MatFormField, MatLabel, MatSelect, MatOption, MatTooltip, ImageExtToMimeTypePipe, OcrOverlayComponent, InfoDialogOpenButtonDirective],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
   host: {
@@ -40,13 +31,23 @@ import { TrunicGlyphComponent } from './trunic-glyph/trunic-glyph.component';
 export class AppComponent {
   readonly dragActive = signal(false);
   readonly pronctnSystem = signal(PRONUNCIATION_SYSTEMS[0]);
-  readonly autoOcrState = signal<{ state: AutoOcrState, fiber: Fiber.RuntimeFiber<void, any>, scope: Scope.CloseableScope } | undefined>(undefined);
+  readonly autoOcrState = computed<AutoOcrState | undefined>(() => this.#ocrManager()?.autoOcrState());
+
+  readonly #ocrManager = signal<OcrManagerService | undefined>(undefined);
+  readonly #ocrManagerP: Promise<OcrManagerService>;
 
   constructor(
-    private readonly pywork: PyworkService,
-    private readonly cdkOverlay: Overlay,
-    private readonly matDialog: MatDialog,
-  ) { }
+    injector: Injector,
+    // worker service is injected statically so it starts initializing immediately
+    _pywork: PyworkService,
+  ) {
+    this.#ocrManagerP = (async () => {
+      const m = await import('./ocr-manager/ocr-manager.service');
+      const svc = injector.get(m.OcrManagerService);
+      this.#ocrManager.set(svc);
+      return svc;
+    })();
+  }
 
   async handleData(data: DataTransfer) {
     const blob = await getImageDataBlobFromDataTransfer(data);
@@ -56,37 +57,8 @@ export class AppComponent {
     this.startOcr(blob[0]);
   }
 
-  startOcr(blob_: Promise<Blob>) {
-    this.currentOverlay?.[1].dispose();
-
-    const prevState = this.autoOcrState();
-    const stopPrevFiber = E.runFork(E.uninterruptible(E.gen(function* () {
-      const { fiber, scope } = yield* E.fromNullable(prevState);
-      const exit = yield* Fiber.interrupt(fiber);
-      yield* Scope.close(scope, exit);
-    })));
-
-    const state = new AutoOcrState();
-    const scope = E.runSync(Scope.make());
-    const fiber = E.runFork(E.gen(this, function* () {
-      yield* E.uninterruptible(stopPrevFiber.await);
-      yield* Scope.extend(doAutoOcr(this.pywork, state, blob_), scope);
-    }));
-    this.autoOcrState.set({ state, fiber, scope });
-
-    fiber.addObserver(e => {
-      if (Exit.isFailure(e) && !Exit.isInterrupted(e)) {
-        // clear state on image-load failure
-        const prevState = this.autoOcrState();
-        if (prevState?.fiber === fiber && prevState.state.imageRenderable() === undefined) {
-          this.autoOcrState.set(undefined);
-          E.runFork(Scope.close(scope, Exit.void));
-        }
-
-        // make sure errors get logged
-        Promise.reject(e.cause);
-      }
-    });
+  async startOcr(blob: Promise<Blob>) {
+    (await this.#ocrManagerP).startOcr(blob);
   }
 
   onImgDrop(event: DragEvent) {
@@ -140,33 +112,6 @@ export class AppComponent {
     event.preventDefault();
   }
 
-  currentOverlay: [EventTarget, OverlayRef] | undefined = undefined;
-
-  onGlyphToggle(event: Event, glyphStrokes: number) {
-    if (event.target != null && (event as ToggleEvent).newState === 'open') {
-      this.currentOverlay?.[1].dispose();
-      const overlayRef = this.cdkOverlay.create({
-        positionStrategy: this.cdkOverlay.position()
-          .flexibleConnectedTo(event.target as Element)
-          .withPositions([
-            { originX: 'center', originY: 'bottom', overlayX: 'center', overlayY: 'top' },
-            { originX: 'center', originY: 'top', overlayX: 'center', overlayY: 'bottom' },
-          ])
-          .withFlexibleDimensions(false),
-      });
-      const compRef = overlayRef.attach(new ComponentPortal(TrunicGlyphDetailComponent));
-      compRef.setInput('strokesPacked', glyphStrokes);
-      compRef.setInput('pronctnSystem', this.pronctnSystem());
-      this.currentOverlay = [event.target, overlayRef];
-    } else if (this.currentOverlay && event.target === this.currentOverlay[0]) {
-      this.currentOverlay[1].dispose();
-    }
-  }
-
-  openInfoDialog() {
-    this.matDialog.open(InfoDialogComponent, { autoFocus: 'dialog' });
-  }
-
   readonly _PNS = PRONUNCIATION_SYSTEMS;
   readonly _EXAMPLE_INPUTS = example_inputs;
 }
@@ -202,68 +147,3 @@ async function getImageDataBlobFromDataTransfer(data: DataTransfer): Promise<[Pr
   }
   return undefined;
 }
-
-type Glyph = { strokes: number, origin: [number, number] };
-class AutoOcrState {
-  readonly imageRenderable = signal<ImageBitmap | undefined>(undefined);
-  readonly ocrProgress = signal<undefined | number>(undefined);
-  readonly recognizedGeometry = signal<GlyphGeometry | undefined>(undefined);
-  readonly recognizedGlyphs = signal<ReadonlyArray<Glyph>>([]);
-}
-
-const doAutoOcr = (pywork: PyworkService, state: AutoOcrState, blob_: Promise<Blob>) => E.gen(function* () {
-  const pyworkResource = E.acquireRelease((r: PyDecodedImageRef) => E.promise(() => pywork.destroy(r)));
-
-  const blob = yield* E.promise(() => blob_);
-
-  // race python-opencv decode and browser decode
-  const browserDecodeP = yield* E.fork(bitmapResource(
-    E.tapError(
-      E.tryPromise(() => createImageBitmap(blob)),
-      e => E.succeed(console.warn("browser could not decode image", e.cause)))
-  ));
-  const pyDecodeP = yield* E.fork(pyworkResource(E.tryPromise(() => pywork.decodeImage(blob))));
-
-  const setDisplayP = yield* E.fork(pipe(
-    Fiber.join(browserDecodeP),
-    E.catchAll(e1 => pipe(
-      Fiber.join(pyDecodeP),
-      E.flatMap(pyDecode => bitmapResource(E.promise(() => pywork.decoded2bitmap(pyDecode)))),
-      E.mapErrorCause(e2 => Cause.parallel(Cause.fail(e1), e2)),
-    )),
-    E.map(v => state.imageRenderable.set(v)),
-  ));
-
-  const pyImage = yield* E.catchAll(
-    Fiber.join(pyDecodeP),
-    e1 => pipe(
-      Fiber.join(browserDecodeP),
-      E.flatMap(browserDecode => pyworkResource(E.promise(() => pywork.loadBitmap(browserDecode)))),
-      E.mapErrorCause(e2 => Cause.parallel(Cause.fail(e1), e2)),
-    ),
-  );
-
-  yield* E.tryPromise(abortSig =>
-    pywork.oneshotRecognize(pyImage, abortSig).forEach(([p, v]) => {
-      state.ocrProgress.set(p * 100);
-      if (v === undefined) return;
-      switch (v.t) {
-        case 0:
-          state.recognizedGeometry.set(v.v);
-          break;
-        case 1:
-          state.recognizedGlyphs.update(prev => [...prev, {
-            origin: v.v.origin,
-            strokes: (v.v.strokes[1] << 8) | v.v.strokes[0]
-          }]);
-          break;
-        default:
-          const _a: never = v;
-      }
-    })
-  );
-
-  yield* setDisplayP.await;
-});
-
-const bitmapResource = E.acquireRelease((b: ImageBitmap) => E.succeed(b.close()));

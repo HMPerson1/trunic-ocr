@@ -156,30 +156,8 @@ mat-toolbar {
   height: 100%;
 }
 
-.glyphs-container {
+app-ocr-overlay {
   position: absolute;
   inset: 0;
   transform-origin: 0 0;
-
-  & details {
-    position: absolute;
-    z-index: auto;
-
-    &:hover {
-      z-index: 2;
-    }
-
-    &>summary {
-      display: block;
-      cursor: pointer;
-    }
-
-    &[open] {
-      z-index: 1;
-
-      &>summary {
-        background: #000;
-      }
-    }
-  }
 }
