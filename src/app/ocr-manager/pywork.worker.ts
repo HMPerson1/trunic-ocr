@@ -43,13 +43,19 @@ onmessage = async ({ data }: { data: PyWorkRequest }) => {
   switch (data.name) {
     case 'decodeImage': {
       const [py, pypkg] = await init;
-      const pynparr1: PyBuffer | undefined = pypkg.decodeImage(py.toPy(await (data.data as Blob).arrayBuffer()));
-      if (pynparr1 != null) {
-        const msg: PyWorkResponse = { type: 'r', id: data.id, data: proxyStore.add(pynparr1) };
-        postMessage(msg);
-      } else {
-        console.warn("opencv could not decode image");
-        const msg: PyWorkError = { type: 'e', id: data.id, data: undefined };
+      try {
+        const imageBuf = await (data.data as Blob).arrayBuffer();
+        const pynparr1: PyBuffer | undefined = pypkg.decodeImage(py.toPy(imageBuf));
+        if (pynparr1 != null) {
+          const msg: PyWorkResponse = { type: 'r', id: data.id, data: proxyStore.add(pynparr1) };
+          postMessage(msg);
+        } else {
+          console.warn("opencv could not decode image");
+          const msg: PyWorkError = { type: 'e', id: data.id, data: undefined };
+          postMessage(msg);
+        }
+      } catch (e) {
+        const msg: PyWorkError = { type: 'e', id: data.id, data: e };
         postMessage(msg);
       }
       return;
