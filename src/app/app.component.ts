@@ -96,12 +96,14 @@ export class AppComponent {
     }
   }
 
-  async useExample(example_entry: { path: string }) {
-    const resp = await fetch(`example-images/${example_entry.path}.png`);
-    if (!resp.ok) {
-      throw Error("error response fetching example", { cause: resp });
-    }
-    this.startOcr(resp.blob());
+  useExample(example_entry: { path: string }) {
+    this.startOcr((async () => {
+      const resp = await fetch(`example-images/${example_entry.path}.png`);
+      if (!resp.ok) {
+        throw Error("error response fetching example", { cause: resp });
+      }
+      return resp.blob();
+    })());
   }
 
   windowDragOver(event: DragEvent) {
