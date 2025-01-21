@@ -17,6 +17,10 @@
         "source": "**",
         "headers": [
           {
+            "key": "Cache-Control",
+            "value": "no-cache,public"
+          },
+          {
             "key": "Cross-Origin-Opener-Policy",
             "value": "same-origin"
           },
@@ -32,6 +36,28 @@
           {
             "key": "Content-Type",
             "value": "application/octet-stream"
+          },
+          {
+            "key": "Cache-Control",
+            "value": "max-age=3600,public"
+          }
+        ]
+      },
+      {
+        "regex": "^/(big-favicon\\.png|favicon\\.(ico|svg)|(logos|example-images)/.*)$",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "max-age=86400,public"
+          }
+        ]
+      },
+      {
+        "regex": "^/((chunk|main|polyfills|worker)-\\w+\\.js)|(styles-\\w+\\.css)$",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "max-age=31536000,immutable,public"
           }
         ]
       }
