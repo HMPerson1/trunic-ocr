@@ -16,7 +16,7 @@
 @let autoOcrState_ = autoOcrState();
 <mat-progress-bar [mode]="autoOcrState_ && autoOcrState_.ocrProgress() === undefined ? 'query' : 'determinate'"
   [value]="autoOcrState_?.ocrProgress() ?? 0" />
-<div class="content">
+<div class="content" [class.dehydrated]="!hydrationDone()">
   <div class="img-drop-container" #dropZone (drop)="onImgDrop($event)" (dragover)="onImgOver($event)"
     (dragleave)="!dropZone.contains($any($event.relatedTarget)) && dragActive.set(false)"
     (dragenter)="dragActive.set(true)">

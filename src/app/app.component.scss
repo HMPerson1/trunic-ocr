@@ -99,6 +99,10 @@ mat-toolbar {
   justify-content: center;
 }
 
+.dehydrated .help-contents {
+  opacity: .5;
+}
+
 .help-or {
   font: var(--mat-sys-body-medium);
   letter-spacing: var(--mat-sys-body-medium-tracking);

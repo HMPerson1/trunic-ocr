@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Injector, computed, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Injector, afterNextRender, computed, signal } from '@angular/core';
 import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatFormField, MatLabel } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
@@ -32,6 +32,7 @@ export class AppComponent {
   readonly dragActive = signal(false);
   readonly pronctnSystem = signal(PRONUNCIATION_SYSTEMS[0]);
   readonly autoOcrState = computed<AutoOcrState | undefined>(() => this.#ocrManager()?.autoOcrState());
+  readonly hydrationDone = signal(false);
 
   readonly #ocrManager = signal<OcrManagerService | undefined>(undefined);
   readonly #ocrManagerP: Promise<OcrManagerService>;
@@ -47,6 +48,13 @@ export class AppComponent {
       this.#ocrManager.set(svc);
       return svc;
     })();
+
+    afterNextRender({
+      earlyRead: () => {
+        this.hydrationDone.set(true)
+        performance.mark('app component hydration done')
+      },
+    })
   }
 
   async handleData(data: DataTransfer) {
