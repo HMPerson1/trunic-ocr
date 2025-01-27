@@ -20,12 +20,7 @@ export class OcrManagerService {
   readonly autoOcrState = computed(() => this.#autoOcrState()?.state);
 
   startOcr(blob_: Promise<Blob>) {
-    const prevState = this.#autoOcrState();
-    const stopPrevFiber = E.runFork(E.uninterruptible(E.gen(function* () {
-      const { fiber, scope } = yield* E.fromNullable(prevState);
-      const exit = yield* Fiber.interrupt(fiber);
-      yield* Scope.close(scope, exit);
-    })));
+    const stopPrevFiber = this.#stopPrevOcr();
 
     const state = new AutoOcrState();
     const scope = E.runSync(Scope.make());
@@ -40,14 +35,27 @@ export class OcrManagerService {
         // clear state on image-load failure
         const prevState = this.#autoOcrState();
         if (prevState?.fiber === fiber && prevState.state.imageRenderable() === undefined) {
-          this.#autoOcrState.set(undefined);
-          E.runFork(Scope.close(scope, Exit.void));
+          this.reset();
         }
 
         // make sure errors get logged
         Promise.reject(e.cause);
       }
     });
+  }
+
+  #stopPrevOcr() {
+    const prevState = this.#autoOcrState();
+    return E.runFork(E.uninterruptible(E.gen(function* () {
+      const { fiber, scope } = yield* E.fromNullable(prevState);
+      const exit = yield* Fiber.interrupt(fiber);
+      yield* Scope.close(scope, exit);
+    })));
+  }
+
+  reset() {
+    this.#stopPrevOcr();
+    this.#autoOcrState.set(undefined);
   }
 
   readonly doAutoOcr = (state: AutoOcrState, blob_: Promise<Blob>) => E.gen(this, function* () {

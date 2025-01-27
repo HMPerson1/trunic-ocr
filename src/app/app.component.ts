@@ -68,6 +68,10 @@ export class AppComponent {
     (await this.#ocrManagerP).startOcr(blob);
   }
 
+  async resetOcr() {
+    (await this.#ocrManagerP).reset();
+  }
+
   onImgDrop(event: DragEvent) {
     if (event.eventPhase === EventPhase.REPLAY) return;
     this.dragActive.set(false);

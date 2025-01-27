@@ -10,6 +10,7 @@
     </mat-select>
   </mat-form-field>
   <span class="toolbar-spacer"></span>
+  <button mat-stroked-button (click)="resetOcr()" [disabled]="autoOcrState() === undefined">Reset</button>
   <button mat-icon-button appInfoDialogOpenButton matTooltip="About"><mat-icon>info</mat-icon></button>
   }
 </mat-toolbar>
