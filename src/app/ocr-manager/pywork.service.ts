@@ -1,137 +1,72 @@
-import { Injectable } from '@angular/core';
-import { Subject, type Observable } from 'rxjs';
-import type { PyWorkError, PyWorkProgress, PyWorkRef, PyWorkRequest, PyWorkResponse } from './worker-api.ts';
+import { Injectable, type OnDestroy } from '@angular/core';
+import * as BrowserWorker from "@effect/platform-browser/BrowserWorker";
+import * as EffectWorker from "@effect/platform/Worker";
+import { pipe } from 'effect';
+import * as E from "effect/Effect";
+import * as Exit from 'effect/Exit';
+import * as Fiber from 'effect/Fiber';
+import type * as Schema from 'effect/Schema';
+import * as Scope from 'effect/Scope';
+import * as Stream from 'effect/Stream';
+import { PyworkEarlyService } from './pywork-early.service';
+import { bitmapResource } from './utils';
+import { Decoded2Bitmap, DecodeImage, Destroy, LoadBitmap, OneshotRecognize, WorkerMessage, type OneshotRecognizeProgress, type PyWorkImageRef, type PyWorkRef } from "./worker-api.js";
 
 @Injectable({
   providedIn: 'root'
 })
-export class PyworkService {
-  readonly worker = (typeof Worker !== 'undefined' && new Worker(new URL("./pywork.worker.ts", import.meta.url))) as Worker;
-  readonly #activeRequests = new Map<number, RequestEntry>();
+export class PyworkService implements OnDestroy {
+  readonly #scope: Scope.CloseableScope;
+  readonly #worker: E.Effect<EffectWorker.SerializedWorker<WorkerMessage>>
 
-  constructor() {
-    if (!this.worker) return;
-    this.worker.onerror = (ev) => {
-      console.error("worker error", ev);
-      const err = new Error("worker error", { cause: ev })
-      if (ev.message.includes('not_little_endian')) {
-        (err as any).snackbarMessageOverride = "This app only works on little-endian systems.";
-      };
-      throw err;
-    };
-    this.worker.onmessageerror = (ev) => console.error("worker message error", ev);
-    this.worker.onmessage = ({ data }: { data: PyWorkProgress | PyWorkResponse | PyWorkError }) => {
-      const entry = this.#activeRequests.get(data.id)
-      if (entry === undefined) throw new Error("unknown id", { cause: data });
-      switch (data.type) {
-        case 'p': {
-          if (entry.progress == null) {
-            console.warn("unexpected progress", data.data);
-          } else {
-            entry.progress(data.data);
-          }
-          break;
-        }
-        case 'r': {
-          entry.resolve(data.data);
-          this.#activeRequests.delete(data.id);
-          break;
-        }
-        case 'e': {
-          if (entry.reject == null) {
-            console.warn("unhandled reject", data.data);
-          } else {
-            entry.reject(data.data);
-          }
-          this.#activeRequests.delete(data.id);
-          break;
-        }
-        default:
-          const _never: never = data;
-          throw new Error("malformed message", { cause: data })
-      }
-    }
+  constructor(early: PyworkEarlyService) {
+    this.#scope = E.runSync(Scope.make());
+    this.#worker = pipe(
+      EffectWorker.makeSerialized<WorkerMessage>({}),
+      Scope.extend(this.#scope),
+      E.provide(BrowserWorker.layer(() => early.worker)),
+      E.runFork,
+      Fiber.join,
+      E.orDie
+    );
   }
 
-  decodeImage(imgBlob: Blob): Promise<PyDecodedImageRef> {
-    const reqId = genReqId();
-    const { promise, resolve, reject } = Promise.withResolvers();
-    this.#activeRequests.set(reqId, { resolve, progress: undefined, reject });
-    const msg: PyWorkRequest = { id: reqId, name: 'decodeImage', data: imgBlob };
-    this.worker.postMessage(msg);
-    return promise as Promise<PyDecodedImageRef>;
+  ngOnDestroy() {
+    E.runFork(Scope.close(this.#scope, Exit.void))
   }
 
-  decoded2bitmap(imgRef: PyDecodedImageRef): Promise<ImageBitmap> {
-    const reqId = genReqId();
-    const { promise, resolve } = Promise.withResolvers();
-    this.#activeRequests.set(reqId, { resolve, progress: undefined, reject: undefined });
-    const msg: PyWorkRequest = { id: reqId, name: 'decoded2bitmap', data: imgRef };
-    this.worker.postMessage(msg);
-    return promise as Promise<ImageBitmap>;
+  #requestStream<Req extends WorkerMessage>(req: Req):
+    Req extends Schema.WithResult<infer A, infer _I, infer E, infer _EI, infer R> ? Stream.Stream<A, E, R> : never {
+    return Stream.flatMap(this.#worker, worker => Stream.catchTags(worker.execute(req) as any, {
+      ParseError: (e: unknown) => Stream.die(e),
+      WorkerError: (e: unknown) => Stream.die(e),
+    })) as any;
   }
 
-  loadBitmap(bmp: ImageBitmap): Promise<PyDecodedImageRef> {
-    const reqId = genReqId();
-    const { promise, resolve } = Promise.withResolvers();
-    this.#activeRequests.set(reqId, { resolve, progress: undefined, reject: undefined });
-    const msg: PyWorkRequest = { id: reqId, name: 'loadBitmap', data: bmp };
-    this.worker.postMessage(msg);
-    return promise as Promise<PyDecodedImageRef>;
+  #request<Req extends WorkerMessage>(req: Req):
+    Req extends Schema.WithResult<infer A, infer _I, infer E, infer _EI, infer R> ? E.Effect<A, E, R> : never {
+    return E.flatMap(this.#worker, worker => E.catchTags(worker.executeEffect(req) as any, {
+      ParseError: e => E.die(e),
+      WorkerError: e => E.die(e),
+    })) as any;
   }
 
-  oneshotRecognize(imgRef: PyDecodedImageRef, signal: AbortSignal): Observable<[number, { t: 0, v: GlyphGeometry } | { t: 1, v: RecognizedGlyph } | undefined]> {
-    const reqId = genReqId();
-    const progOut = new Subject<any>();
-    this.#activeRequests.set(reqId, {
-      resolve: () => progOut.complete(),
-      progress: v => progOut.next((v as any)),
-      reject: e => progOut.error(e),
-    });
-    const msg: PyWorkRequest = { id: reqId, name: 'oneshotRecognize', data: imgRef };
-    this.worker.postMessage(msg);
-    signal.addEventListener('abort', () => this.interrupt(reqId));
-    return progOut.asObservable();
+  #acqRelPyWorkRef: <T extends PyWorkRef, E, R>(acq: E.Effect<T, E, R>) => E.Effect<T, E, Scope.Scope | R>
+    = E.acquireRelease(ref => E.orDie(E.flatMap(this.#worker, w => w.executeEffect(new Destroy({ ref })))))
+
+  decodeImage(blob: Blob): E.Effect<PyWorkImageRef, undefined, Scope.Scope> {
+    return this.#acqRelPyWorkRef(this.#request(new DecodeImage({ blob })));
   }
 
-  destroy(imgRef: PyDecodedImageRef): Promise<void> {
-    const reqId = genReqId();
-    const { promise, resolve } = Promise.withResolvers();
-    this.#activeRequests.set(reqId, { resolve, progress: undefined, reject: undefined });
-    const msg: PyWorkRequest = { id: reqId, name: 'destroy', data: imgRef };
-    this.worker.postMessage(msg);
-    return promise as Promise<undefined>;
+  decoded2bitmap(imgRef: PyWorkImageRef): E.Effect<ImageBitmap, never, Scope.Scope> {
+    return bitmapResource(this.#request(new Decoded2Bitmap({ imgRef })));
   }
 
-  interrupt(targetReqId: number): Promise<void> {
-    const reqId = genReqId();
-    const { promise, resolve } = Promise.withResolvers();
-    this.#activeRequests.set(reqId, { resolve, progress: undefined, reject: undefined });
-    const msg: PyWorkRequest = { id: reqId, name: 'interrupt', data: targetReqId };
-    this.worker.postMessage(msg);
-    return promise as Promise<undefined>;
+  loadBitmap(imgBmp: ImageBitmap): E.Effect<PyWorkImageRef, never, Scope.Scope> {
+    return this.#acqRelPyWorkRef(this.#request(new LoadBitmap({ imgBmp })));
   }
-}
 
-declare const tag_decodedImage: unique symbol;
-export type PyDecodedImageRef = PyWorkRef & { [tag_decodedImage]: null };
-
-export type GlyphGeometry = {
-  upscale: number,
-  stroke_width: number,
-  glyph_width: number,
-  glyph_template_shape: [number, number],
-  glyph_template_origin: [number, number],
-  all_lines: Array<Array<[[number, number], [number, number]]>>,
-  circle_center: [number, number],
-}
-export type RecognizedGlyph = {
-  origin: [number, number],
-  strokes: [number, number],
-}
-
-type RequestEntry = { resolve: (d: unknown) => void, progress?: (d: unknown) => void, reject?: (d: unknown) => void };
-
-function genReqId(): number {
-  return (Math.random() * (2 ** 31)) | 0
+  oneshotRecognize(imgRef: PyWorkImageRef): Stream.Stream<OneshotRecognizeProgress, never, never> {
+    return this.#requestStream(new OneshotRecognize({ imgRef }));
+  }
 }

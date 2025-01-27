@@ -5,7 +5,10 @@ import * as E from 'effect/Effect';
 import * as Exit from "effect/Exit";
 import * as Fiber from 'effect/Fiber';
 import * as Scope from 'effect/Scope';
-import { type GlyphGeometry, type PyDecodedImageRef, PyworkService } from './pywork.service';
+import * as Stream from 'effect/Stream';
+import { PyworkService } from './pywork.service';
+import { bitmapResource } from './utils';
+import type { Glyph, GlyphGeometry } from './worker-api';
 
 @Injectable({
   providedIn: 'root'
@@ -51,65 +54,55 @@ export class OcrManagerService {
     const blob = yield* E.promise(() => blob_);
 
     // race python-opencv decode and browser decode
-    const browserDecodeP = yield* E.fork(bitmapResource(
-      E.tapError(
-        E.tryPromise(() => createImageBitmap(blob)),
-        e => E.succeed(console.warn("browser could not decode image", e.cause)))
+    const browserDecodeP = yield* E.fork(pipe(
+      E.tryPromise(() => createImageBitmap(blob)),
+      E.tapError(e => E.succeed(console.warn("browser could not decode image", e.cause))),
+      bitmapResource,
     ));
-    const pyDecodeP = yield* E.fork(this.pyworkResource(E.tryPromise(() => this.pywork.decodeImage(blob))));
+    const pyDecodeP = yield* E.fork(this.pywork.decodeImage(blob));
 
     const setDisplayP = yield* E.fork(pipe(
       Fiber.join(browserDecodeP),
       E.catchAll(e1 => pipe(
         Fiber.join(pyDecodeP),
-        E.flatMap(pyDecode => bitmapResource(E.promise(() => this.pywork.decoded2bitmap(pyDecode)))),
-        E.mapErrorCause(e2 => Cause.parallel(Cause.fail(e1), e2))
+        E.flatMap(pyDecode => this.pywork.decoded2bitmap(pyDecode)),
+        E.mapErrorCause(e2 => Cause.parallel(Cause.fail(e1), e2)),
       )),
-      E.map(v => state.imageRenderable.set(v))
+      E.map(v => state.imageRenderable.set(v)),
     ));
 
     const pyImage = yield* E.catchAll(
       Fiber.join(pyDecodeP),
       e1 => pipe(
         Fiber.join(browserDecodeP),
-        E.flatMap(browserDecode => this.pyworkResource(E.promise(() => this.pywork.loadBitmap(browserDecode)))),
-        E.mapErrorCause(e2 => Cause.parallel(Cause.fail(e1), e2))
+        E.flatMap(browserDecode => this.pywork.loadBitmap(browserDecode)),
+        E.mapErrorCause(e2 => Cause.parallel(Cause.fail(e1), e2)),
       )
     );
 
-    yield* E.tryPromise(abortSig =>
-      this.pywork.oneshotRecognize(pyImage, abortSig).forEach(([p, v]) => {
-        state.ocrProgress.set(p * 100);
-        if (v === undefined) return;
-        switch (v.t) {
-          case 0:
-            state.recognizedGeometry.set(v.v);
-            break;
-          case 1:
-            state.recognizedGlyphs.update(prev => [...prev, {
-              origin: v.v.origin,
-              strokes: (v.v.strokes[1] << 8) | v.v.strokes[0]
-            }]);
-            break;
-          default:
-            const _a: never = v;
-        }
-      })
-    );
+    yield* Stream.runForEach(this.pywork.oneshotRecognize(pyImage), ([p, v]) => {
+      state.ocrProgress.set(p * 100);
+      if (v === undefined) return E.void;
+      switch (v._tag) {
+        case 'a':
+          state.recognizedGeometry.set(v.v);
+          break;
+        case 'b':
+          state.recognizedGlyphs.update(prev => [...prev, v.v]);
+          break;
+        default:
+          const _a: never = v;
+      }
+      return E.void;
+    })
 
-    yield* setDisplayP.await;
+    yield* Fiber.join(setDisplayP);
   });
-
-  readonly pyworkResource = E.acquireRelease((r: PyDecodedImageRef) => E.promise(() => this.pywork.destroy(r)));
 }
 
-export type Glyph = { strokes: number; origin: [number, number]; };
 export class AutoOcrState {
   readonly imageRenderable = signal<ImageBitmap | undefined>(undefined);
   readonly ocrProgress = signal<undefined | number>(undefined);
   readonly recognizedGeometry = signal<GlyphGeometry | undefined>(undefined);
   readonly recognizedGlyphs = signal<ReadonlyArray<Glyph>>([]);
 }
-
-const bitmapResource = E.acquireRelease((b: ImageBitmap) => E.succeed(b.close()));
-

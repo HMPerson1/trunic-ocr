@@ -12,7 +12,7 @@ import { ImageRendererCanvasComponent } from './image-renderer-canvas/image-rend
 import { InfoDialogOpenButtonDirective } from './info-dialog/info-dialog-open-button.directive';
 import { ImageExtToMimeTypePipe } from './misc/image-ext-to-mime-type.pipe';
 import type { AutoOcrState, OcrManagerService } from './ocr-manager/ocr-manager.service';
-import { PyworkService } from './ocr-manager/pywork.service';
+import { PyworkEarlyService } from './ocr-manager/pywork-early.service';
 import { OcrOverlayComponent } from "./ocr-overlay/ocr-overlay.component";
 import { PRONUNCIATION_SYSTEMS } from './trunic-data';
 
@@ -40,14 +40,14 @@ export class AppComponent {
   constructor(
     injector: Injector,
     // worker service is injected statically so it starts initializing immediately
-    _pywork: PyworkService,
+    _pywork: PyworkEarlyService,
   ) {
-    this.#ocrManagerP = (async () => {
+    this.#ocrManagerP = (typeof Worker !== 'undefined') ? (async () => {
       const m = await import('./ocr-manager/ocr-manager.service');
       const svc = injector.get(m.OcrManagerService);
       this.#ocrManager.set(svc);
       return svc;
-    })();
+    })() : new Promise(() => { });
 
     afterNextRender({
       earlyRead: () => {

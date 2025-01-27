@@ -2,7 +2,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, input } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import type { GlyphGeometry } from '../ocr-manager/pywork.service';
+import type { GlyphGeometry } from '../ocr-manager/worker-api';
 import * as trunic_data from '../trunic-data';
 import { TrunicGlyphImageComponent } from "../trunic-glyph-image/trunic-glyph-image.component";
 import * as defaultGlyphGeometry from './default-glyph-geometry.json';
@@ -35,5 +35,5 @@ export class TrunicGlyphDetailComponent {
       .filter(v => v !== undefined)
   );
 
-  readonly _DEFAULT_GLYPH_GEOMETRY = defaultGlyphGeometry as GlyphGeometry;
+  readonly _DEFAULT_GLYPH_GEOMETRY = defaultGlyphGeometry as unknown as GlyphGeometry;
 }
