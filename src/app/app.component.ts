@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, Injector, afterNextRender, computed, signal } from '@angular/core';
+import { EventPhase } from '@angular/core/primitives/event-dispatch';
 import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatFormField, MatLabel } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
@@ -22,8 +23,6 @@ import { PRONUNCIATION_SYSTEMS } from './trunic-data';
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
   host: {
-    '(window:dragover)': 'windowDragOver($event)',
-    '(window:drop)': 'windowDrop($event)',
     '(window:paste)': 'onPaste($event)',
   },
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -70,6 +69,7 @@ export class AppComponent {
   }
 
   onImgDrop(event: DragEvent) {
+    if (event.eventPhase === EventPhase.REPLAY) return;
     this.dragActive.set(false);
     const dt = event.dataTransfer;
     if (dt == null) return;
@@ -79,6 +79,7 @@ export class AppComponent {
     this.handleData(dt);
   }
   onImgOver(event: DragEvent) {
+    if (event.eventPhase === EventPhase.REPLAY) return;
     const dt = event.dataTransfer;
     if (dt == null) return;
     event.stopPropagation();
@@ -87,6 +88,7 @@ export class AppComponent {
   }
 
   onPaste(event: ClipboardEvent) {
+    if (event.eventPhase === EventPhase.REPLAY) return;
     const dt = event.clipboardData
     if (dt == null) return;
     event.preventDefault();
@@ -114,16 +116,9 @@ export class AppComponent {
     })());
   }
 
-  windowDragOver(event: DragEvent) {
-    event.dataTransfer!.dropEffect = 'none'
-    event.preventDefault();
-  }
-  windowDrop(event: DragEvent) {
-    event.preventDefault();
-  }
-
   readonly _PNS = PRONUNCIATION_SYSTEMS;
   readonly _EXAMPLE_INPUTS = example_inputs;
+  readonly _EventPhase_REPLAY = EventPhase.REPLAY;
 }
 
 async function getImageDataBlobFromDataTransfer(data: DataTransfer): Promise<[Promise<Blob>] | undefined> {

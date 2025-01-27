@@ -34,6 +34,11 @@
   <meta property="og:url" content="https://trunic-ocr.web.app/">
   <meta property="og:image" content="https://trunic-ocr.web.app/big-favicon.png">
   <meta property="og:description" content="Automatically decode images of Tunic runes, entirely in your browser">
+
+  <script>
+    window.addEventListener('dragover', ev => { event.dataTransfer.dropEffect = 'none'; event.preventDefault(); });
+    window.addEventListener('drop', ev => { event.preventDefault(); });
+  </script>
 </head>
 
 <body class="mat-typography mat-app-background">

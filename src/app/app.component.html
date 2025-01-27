@@ -17,9 +17,9 @@
 <mat-progress-bar [mode]="autoOcrState_ && autoOcrState_.ocrProgress() === undefined ? 'query' : 'determinate'"
   [value]="autoOcrState_?.ocrProgress() ?? 0" />
 <div class="content" [class.dehydrated]="!hydrationDone()">
-  <div class="img-drop-container" #dropZone (drop)="onImgDrop($event)" (dragover)="onImgOver($event)"
-    (dragleave)="!dropZone.contains($any($event.relatedTarget)) && dragActive.set(false)"
-    (dragenter)="dragActive.set(true)">
+  <div class="img-drop-container" #dropZone (drop)="onImgDrop($event)"
+    (dragover)="$event.eventPhase !== _EventPhase_REPLAY && dragActive.set(true); onImgOver($event)"
+    (dragleave)="$event.eventPhase !== _EventPhase_REPLAY && !dropZone.contains($any($event.relatedTarget)) && dragActive.set(false)">
     @if (autoOcrState_) {
     @if (autoOcrState_.imageRenderable(); as imageRenderable_) {
     <canvas app-image-renderer-canvas class="img-display" [data]="imageRenderable_"
