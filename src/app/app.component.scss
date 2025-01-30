@@ -31,9 +31,34 @@ mat-toolbar {
   &>.toolbar-spacer {
     flex: 1;
   }
+
+  &>mat-button-toggle-group {
+    // https://github.com/angular/components/issues/30405
+    --mat-standard-button-toggle-height: 38px;
+  }
 }
 
 .content {
+  display: flex;
+
+  &>* {
+    flex: none;
+  }
+
+  &>.img-container {
+    flex: 1;
+  }
+}
+
+app-ocr-manual-control-panel {
+  height: 100%;
+  width: 400px;
+
+  border-left: 1px solid var(--mat-sys-outline-variant);
+}
+
+.img-container {
+  height: 100%;
   padding: 40px;
 }
 
@@ -99,7 +124,7 @@ mat-toolbar {
   justify-content: center;
 }
 
-.dehydrated .help-contents {
+:host.dehydrated .help-contents {
   opacity: .5;
 }
 

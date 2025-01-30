@@ -1,0 +1,38 @@
+@use '@angular/material' as mat;
+
+:host {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: scroll;
+
+  @include mat.theme((density: -3));
+}
+
+h2 {
+  margin: 16px 0 16px 0;
+  font: var(--mat-sys-title-large);
+  letter-spacing: var(--mat-sys-title-large-tracking);
+}
+
+h2:first-child {
+  margin-top: 0;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-line {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+}
+
+.geom-fields {
+  display: grid;
+  grid-template: auto 1fr / 1fr 1fr;
+  gap: 16px;
+}

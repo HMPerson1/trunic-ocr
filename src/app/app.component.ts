@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, Injector, afterNextRender, computed, signal } from '@angular/core';
 import { EventPhase } from '@angular/core/primitives/event-dispatch';
 import { MatButton, MatIconButton } from '@angular/material/button';
+import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
 import { MatFormField, MatLabel } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressBar } from '@angular/material/progress-bar';
@@ -14,22 +15,25 @@ import { InfoDialogOpenButtonDirective } from './info-dialog/info-dialog-open-bu
 import { ImageExtToMimeTypePipe } from './misc/image-ext-to-mime-type.pipe';
 import type { AutoOcrState, OcrManagerService } from './ocr-manager/ocr-manager.service';
 import { PyworkEarlyService } from './ocr-manager/pywork-early.service';
+import { OcrManualControlPanelComponent } from "./ocr-manual-control-panel/ocr-manual-control-panel.component";
 import { OcrOverlayComponent } from "./ocr-overlay/ocr-overlay.component";
 import { PRONUNCIATION_SYSTEMS } from './trunic-data';
 
 @Component({
   selector: 'app-root',
-  imports: [ImageRendererCanvasComponent, MatToolbar, MatIcon, MatButton, MatIconButton, MatProgressBar, MatFormField, MatLabel, MatSelect, MatOption, MatTooltip, ImageExtToMimeTypePipe, OcrOverlayComponent, InfoDialogOpenButtonDirective],
+  imports: [ImageRendererCanvasComponent, MatToolbar, MatIcon, MatButton, MatIconButton, MatProgressBar, MatFormField, MatLabel, MatSelect, MatOption, MatTooltip, ImageExtToMimeTypePipe, OcrOverlayComponent, InfoDialogOpenButtonDirective, MatButtonToggle, MatButtonToggleGroup, OcrManualControlPanelComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
   host: {
     '(window:paste)': 'onPaste($event)',
+    '[class.dehydrated]': "!hydrationDone()",
   },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent {
   readonly dragActive = signal(false);
   readonly pronctnSystem = signal(PRONUNCIATION_SYSTEMS[0]);
+  readonly autoMode = signal(false);
   readonly autoOcrState = computed<AutoOcrState | undefined>(() => this.#ocrManager()?.autoOcrState());
   readonly hydrationDone = signal(false);
 
