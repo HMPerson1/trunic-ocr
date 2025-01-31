@@ -6,11 +6,21 @@
   <h2>Geometry</h2>
   <div class="section">
     <div class="form-line">
-      <mat-form-field><mat-label>Preview X</mat-label><input type="number" matInput value="0" /></mat-form-field>
-      <mat-form-field><mat-label>Preview Y</mat-label><input type="number" matInput value="0" /></mat-form-field>
+      <mat-form-field>
+        <input type="number" matInput [formControl]="previewXCtrl" />
+        <mat-label>Preview X</mat-label><span matTextSuffix>px</span>
+      </mat-form-field>
+      <mat-form-field>
+        <input type="number" matInput [formControl]="previewYCtrl" />
+        <mat-label>Preview Y</mat-label><span matTextSuffix>px</span>
+      </mat-form-field>
     </div>
-    <div style="width: 300px; height: 360px; background: white; align-self: center;">
-      <app-trunic-glyph-image [geometry]="manualGlyphGeometry()" [strokesPacked]="4095" style="color: green; display: block;" />
+    <div class="geom-preview">
+      @let inputImage_ = inputImage();
+      <canvas app-cropped-image-renderer-canvas [inputImage]="inputImage_" [windowSize]="glyphSizeSrcPx()"
+        [windowPos]="previewWindowSrcPx()" #previewDisplay="app-cropped-image-renderer-canvas"></canvas>
+      <app-trunic-glyph-image [geometry]="manualGlyphGeometry()" [strokesPacked]="4095"
+        [style.transform]="previewDisplay.imgTransform().scale(1/manualGlyphGeometry().upscale)" />
     </div>
     <div class="geom-fields">
       <mat-form-field>
@@ -22,11 +32,11 @@
         <mat-label>angle</mat-label><span matTextSuffix>&deg;</span>
       </mat-form-field>
       <mat-form-field>
-        <input type="number" matInput formControlName="upper" min="0" />
+        <input type="number" matInput formControlName="upper" />
         <mat-label>upper</mat-label><span matTextSuffix>px</span>
       </mat-form-field>
       <mat-form-field>
-        <input type="number" matInput formControlName="lower" min="0" />
+        <input type="number" matInput formControlName="lower" />
         <mat-label>lower</mat-label><span matTextSuffix>px</span>
       </mat-form-field>
       <mat-form-field>

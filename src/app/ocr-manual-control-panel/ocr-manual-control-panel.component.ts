@@ -1,30 +1,51 @@
-import { Component, DestroyRef, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MAT_FORM_FIELD_DEFAULT_OPTIONS, MatFormFieldModule } from '@angular/material/form-field';
 import { MatInput } from '@angular/material/input';
+import { CroppedImageRendererCanvasComponent } from '../cropped-image-renderer-canvas/cropped-image-renderer-canvas.component';
+import { OcrManagerService } from '../ocr-manager/ocr-manager.service';
 import type { GlyphGeometry } from '../ocr-manager/worker-api';
 import { TrunicGlyphImageComponent } from "../trunic-glyph-image/trunic-glyph-image.component";
 
 @Component({
   selector: 'app-ocr-manual-control-panel',
-  imports: [ReactiveFormsModule, MatFormFieldModule, MatInput, TrunicGlyphImageComponent],
+  imports: [ReactiveFormsModule, MatFormFieldModule, MatInput, TrunicGlyphImageComponent, CroppedImageRendererCanvasComponent],
   providers: [{ provide: MAT_FORM_FIELD_DEFAULT_OPTIONS, useValue: { appearance: 'outline', subscriptSizing: 'dynamic' } }],
   templateUrl: './ocr-manual-control-panel.component.html',
-  styleUrl: './ocr-manual-control-panel.component.scss'
+  styleUrl: './ocr-manual-control-panel.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OcrManualControlPanelComponent {
-  readonly geometryForm;
+  readonly geometryForm = fb.group({
+    upscale: fb.control(3, [Validators.min(1)]),
+    size: fb.control(90, [Validators.min(0)]),
+    angle: fb.control(30, [Validators.min(0), Validators.max(90)]),
+    upper: fb.control(0),
+    lower: fb.control(0),
+    stroke_width: fb.control(18, [Validators.min(1)]),
+  });
   readonly manualGlyphGeometry;
-  constructor(destroyRef: DestroyRef) {
-    const fb = new FormBuilder().nonNullable;
-    this.geometryForm = fb.group({
-      upscale: fb.control(3, [Validators.min(1)]),
-      size: fb.control(90, [Validators.min(0)]),
-      angle: fb.control(30, [Validators.min(0), Validators.max(90)]),
-      upper: fb.control(90, [Validators.min(0)]),
-      lower: fb.control(90, [Validators.min(0)]),
-      stroke_width: fb.control(18, [Validators.min(1)]),
-    });
+
+  readonly previewXCtrl = fb.control(0);
+  readonly previewYCtrl = fb.control(0);
+  readonly previewX = toSignal(this.previewXCtrl.valueChanges, { initialValue: 0 });
+  readonly previewY = toSignal(this.previewYCtrl.valueChanges, { initialValue: 0 });
+  readonly previewWindowSrcPx = computed(() => {
+    const geom = this.manualGlyphGeometry();
+    const [offX, offY] = geom.glyph_template_origin;
+    return [(this.previewX() - offX) / geom.upscale, (this.previewY() - offY) / geom.upscale] as const;
+  });
+  readonly glyphSizeSrcPx = computed(() => {
+    const geom = this.manualGlyphGeometry();
+    const [height, width] = geom.glyph_template_shape;
+    return { width: width / geom.upscale, height: height / geom.upscale };
+  });
+
+  readonly inputImage;
+
+  constructor(ocrManager: OcrManagerService, destroyRef: DestroyRef) {
+    this.inputImage = computed(() => ocrManager.autoOcrState()?.imageRenderable());
 
     this.manualGlyphGeometry = signal(makeFullGlyphGeometry(this.geometryForm.getRawValue()));
     const subn = this.geometryForm.valueChanges.subscribe(() => this.manualGlyphGeometry.set(makeFullGlyphGeometry(this.geometryForm.getRawValue())));
@@ -46,11 +67,11 @@ function makeFullGlyphGeometry(val: GeometryFormValue): GlyphGeometry {
   const grid_x = val.size * Math.cos(a);
   const grid_y = val.size * Math.sin(a);
   const glyph_width = grid_x * 2;
-  const glyph_height = val.lower + val.upper + grid_y * 2;
+  const glyph_height = val.lower + val.upper + val.size * 2 + grid_y * 2;
   const ox = Math.floor(val.stroke_width / 2) + val.upscale;
-  const oy = val.upper + grid_y + Math.floor(val.stroke_width / 2) + val.upscale;
+  const oy = val.upper + val.size + grid_y + Math.floor(val.stroke_width / 2) + val.upscale;
   const pu00x = ox;
-  const pu00y = oy - val.upper;
+  const pu00y = oy - val.upper - val.size;
   const pu10x = ox + grid_x;
   const pu10y = pu00y - grid_y;
   const pu01x = pu10x;
@@ -58,7 +79,7 @@ function makeFullGlyphGeometry(val: GeometryFormValue): GlyphGeometry {
   const pu11x = ox + grid_x * 2;
   const pu11y = pu00y;
   const pl00x = ox;
-  const pl00y = oy + val.lower;
+  const pl00y = oy + val.lower + val.size;
   const pl10x = ox + grid_x;
   const pl10y = pl00y - grid_y;
   const pl01x = pl10x;
@@ -95,3 +116,5 @@ function makeFullGlyphGeometry(val: GeometryFormValue): GlyphGeometry {
     ],
   };
 }
+
+const fb = new FormBuilder().nonNullable;
