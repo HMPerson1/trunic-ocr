@@ -1,0 +1,52 @@
+<h2 mat-dialog-title>
+  @if (data.isNew) {
+  Add Glyph
+  } @else {
+  Edit Glyph
+  }
+</h2>
+<form [formGroup]="glyphForm">
+  <mat-dialog-content>
+    <!-- TODO: extract this -->
+    <div class="geom-preview">
+      <canvas app-cropped-image-renderer-canvas [inputImage]="data.inputImage"
+        [windowSize]="{width: data.geometry.glyph_template_shape[1]/data.geometry.upscale, height: data.geometry.glyph_template_shape[0]/data.geometry.upscale}"
+        [windowPos]="previewWindowSrcPx()" #previewDisplay="app-cropped-image-renderer-canvas"></canvas>
+      <app-trunic-glyph-image [geometry]="data.geometry" [strokesPacked]="glyphStrokes()"
+        [style.transform]="previewDisplay.imgTransform().scale(1/data.geometry.upscale)" />
+    </div>
+
+    <div class="form-line">
+      <mat-form-field>
+        <input type="number" matInput formControlName="x" />
+        <mat-label>Glyph X</mat-label><span matTextSuffix>px</span>
+      </mat-form-field>
+      <mat-form-field>
+        <input type="number" matInput formControlName="y" />
+        <mat-label>Glyph Y</mat-label><span matTextSuffix>px</span>
+      </mat-form-field>
+    </div>
+    <div class="form-line">
+      <div class="strokes-grid">
+        <span>Consonant Strokes:</span>
+        <mat-checkbox formControlName="sc1" />
+        <mat-checkbox formControlName="sc2" />
+        <mat-checkbox formControlName="sc3" />
+        <mat-checkbox formControlName="sc4" />
+        <mat-checkbox formControlName="sc5" />
+        <mat-checkbox formControlName="sc6" />
+        <span>Vowel Strokes:</span>
+        <mat-checkbox formControlName="sv1" />
+        <mat-checkbox formControlName="sv2" />
+        <mat-checkbox formControlName="sv3" />
+        <mat-checkbox formControlName="sv4" />
+        <mat-checkbox formControlName="sv5" />
+      </div>
+      <mat-checkbox formControlName="sf" labelPosition="before">Flip:</mat-checkbox>
+    </div>
+  </mat-dialog-content>
+  <mat-dialog-actions>
+    <button mat-button [mat-dialog-close]="undefined">Cancel</button>
+    <button mat-button [mat-dialog-close]="glyphResult()" type="submit" cdkFocusInitial>Done</button>
+  </mat-dialog-actions>
+</form>

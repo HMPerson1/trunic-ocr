@@ -24,7 +24,11 @@ export class CroppedImageRendererCanvasComponent {
 
     effect(() => {
       const data = this.inputImage();
-      if (!data) return;
+      if (!data) {
+        // reset canvas image
+        canvas.width = canvas.width;
+        return;
+      }
       const devPxSize = this.devPxSize();
       const { blockSize: height, inlineSize: width } = devPxSize;
       const fitMat = objectFitMax(this.windowSize(), devPxSize);

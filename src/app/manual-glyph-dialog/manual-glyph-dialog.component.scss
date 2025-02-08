@@ -1,39 +1,20 @@
 @use '@angular/material' as mat;
 
 :host {
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-
   @include mat.form-field-overrides((container-height: 44px, container-vertical-padding: 10px));
 }
 
-h2 {
-  margin: 16px 0 16px 0;
-  font: var(--mat-sys-title-large);
-  letter-spacing: var(--mat-sys-title-large-tracking);
-}
-
-h2:first-child {
-  margin-top: 0;
-}
-
-section {
+mat-dialog-content {
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-.form-line {
-  display: flex;
-  flex-direction: row;
-  gap: 16px;
+  align-items: stretch;
 }
 
 .geom-preview {
   align-self: center;
-  width: 300px;
-  height: 400px;
+  width: 500px;
+  height: 500px;
   contain: strict;
 
   // https://stackoverflow.com/a/72287995
@@ -61,12 +42,22 @@ section {
   }
 }
 
-.geom-fields {
-  display: grid;
-  grid-template: auto 1fr / 1fr 1fr;
+.form-line {
+  display: flex;
+  flex-direction: row;
   gap: 16px;
+  align-items: center;
 }
 
-table {
-  font-variant-numeric: tabular-nums;
+.strokes-grid {
+  margin-bottom: 4px; // leave room for checkbox touch target
+  display: grid;
+  gap: 8px;
+  align-items: baseline;
+  grid-template: auto auto / 1fr repeat(6, auto);
+
+  &>span {
+    font: var(--mat-sys-body-medium);
+    letter-spacing: var(--mat-sys-body-medium-tracking);
+  }
 }

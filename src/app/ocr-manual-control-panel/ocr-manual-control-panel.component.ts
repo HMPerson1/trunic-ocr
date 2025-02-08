@@ -1,16 +1,23 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, DestroyRef, signal, type TrackByFunction } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatButton, MatIconButton } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MAT_FORM_FIELD_DEFAULT_OPTIONS, MatFormFieldModule } from '@angular/material/form-field';
+import { MatIcon } from '@angular/material/icon';
 import { MatInput } from '@angular/material/input';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import * as rxjs from 'rxjs';
 import { CroppedImageRendererCanvasComponent } from '../cropped-image-renderer-canvas/cropped-image-renderer-canvas.component';
-import { OcrManagerService } from '../ocr-manager/ocr-manager.service';
-import type { GlyphGeometry } from '../ocr-manager/worker-api';
+import { ManualGlyphDialogComponent, type ManualGlyphDialogInput } from '../manual-glyph-dialog/manual-glyph-dialog.component';
+import { makeFullGlyphGeometry, OcrManagerService } from '../ocr-manager/ocr-manager.service';
+import type { Glyph } from '../ocr-manager/worker-api';
 import { TrunicGlyphImageComponent } from "../trunic-glyph-image/trunic-glyph-image.component";
+import { DisplayStrokesPipe } from './display-strokes.pipe';
 
 @Component({
   selector: 'app-ocr-manual-control-panel',
-  imports: [ReactiveFormsModule, MatFormFieldModule, MatInput, TrunicGlyphImageComponent, CroppedImageRendererCanvasComponent],
+  imports: [ReactiveFormsModule, MatFormFieldModule, MatInput, TrunicGlyphImageComponent, CroppedImageRendererCanvasComponent, MatTableModule, DisplayStrokesPipe, MatIconButton, MatButton, MatIcon],
   providers: [{ provide: MAT_FORM_FIELD_DEFAULT_OPTIONS, useValue: { appearance: 'outline', subscriptSizing: 'dynamic' } }],
   templateUrl: './ocr-manual-control-panel.component.html',
   styleUrl: './ocr-manual-control-panel.component.scss',
@@ -44,77 +51,94 @@ export class OcrManualControlPanelComponent {
 
   readonly inputImage;
 
-  constructor(ocrManager: OcrManagerService, destroyRef: DestroyRef) {
+  constructor(
+    private readonly matDialog: MatDialog,
+    private readonly changeDetectorRef: ChangeDetectorRef,
+    private readonly ocrManager: OcrManagerService,
+    destroyRef: DestroyRef,
+  ) {
     this.inputImage = computed(() => ocrManager.autoOcrState()?.imageRenderable());
 
     this.manualGlyphGeometry = signal(makeFullGlyphGeometry(this.geometryForm.getRawValue()));
-    const subn = this.geometryForm.valueChanges.subscribe(() => this.manualGlyphGeometry.set(makeFullGlyphGeometry(this.geometryForm.getRawValue())));
+    const subn = this.geometryForm.valueChanges.subscribe(() => {
+      if (!this.geometryForm.valid) return;
+      const geom = makeFullGlyphGeometry(this.geometryForm.getRawValue());
+      this.manualGlyphGeometry.set(geom);
+      ocrManager.autoOcrState()?.recognizedGeometry.set(geom);
+    });
     destroyRef.onDestroy(() => subn.unsubscribe());
   }
-}
 
-type GeometryFormValue = {
-  upscale: number,
-  size: number,
-  angle: number,
-  upper: number,
-  lower: number,
-  stroke_width: number,
-}
+  readonly manualGlyphs = new MatTableDataSource<Glyph & { readonly id: number }>();
+  #lastGlyphId = 0;
 
-function makeFullGlyphGeometry(val: GeometryFormValue): GlyphGeometry {
-  const a = val.angle * Math.PI / 180;
-  const grid_x = val.size * Math.cos(a);
-  const grid_y = val.size * Math.sin(a);
-  const glyph_width = grid_x * 2;
-  const glyph_height = val.lower + val.upper + val.size * 2 + grid_y * 2;
-  const ox = Math.floor(val.stroke_width / 2) + val.upscale;
-  const oy = val.upper + val.size + grid_y + Math.floor(val.stroke_width / 2) + val.upscale;
-  const pu00x = ox;
-  const pu00y = oy - val.upper - val.size;
-  const pu10x = ox + grid_x;
-  const pu10y = pu00y - grid_y;
-  const pu01x = pu10x;
-  const pu01y = pu00y + grid_y;
-  const pu11x = ox + grid_x * 2;
-  const pu11y = pu00y;
-  const pl00x = ox;
-  const pl00y = oy + val.lower + val.size;
-  const pl10x = ox + grid_x;
-  const pl10y = pl00y - grid_y;
-  const pl01x = pl10x;
-  const pl01y = pl00y + grid_y;
-  const pl11x = ox + grid_x * 2;
-  const pl11y = pl00y;
-  return {
-    upscale: val.upscale,
-    stroke_width: val.stroke_width,
-    glyph_width,
-    glyph_template_shape: [
-      Math.ceil(glyph_height) + 3 * val.stroke_width + val.upscale * 2,
-      Math.ceil(glyph_width) + val.stroke_width + val.upscale * 2,
-    ],
-    glyph_template_origin: [ox, oy],
-    all_lines: [
-      [[[pu01x, pu01y], [pu11x, pu11y]]],
-      [[[pu10x, pu10y], [pu10x, oy]]],
-      [[[pu00x, pu00y], [pu01x, pu01y]]],
-      [[[pl00x, pl00y], [pl10x, pl10y]]],
-      [[[pu01x, pu01y], [pu01x, oy]], [[pl10x, pl10y], [pl01x, pl01y]]],
-      [[[pl10x, pl10y], [pl11x, pl11y]]],
-      [[[pu10x, pu10y], [pu11x, pu11y]]],
-      [[[pu00x, pu00y], [pu10x, pu10y]]],
-      [[[pu00x, pu00y], [pu00x, oy]], [[pl00x, pl00y - grid_y], [pl00x, pl00y]]],
-      [[[pl00x, pl00y], [pl01x, pl01y]]],
-      [[[pl01x, pl01y], [pl11x, pl11y]]],
-      [],
-      [[[ox, oy], [ox + glyph_width, oy]]],
-    ],
-    circle_center: [
-      pl01x,
-      pl01y + val.stroke_width,
-    ],
-  };
+  async addGlyphClick() {
+    const inputImage = this.inputImage();
+    if (inputImage === undefined) return;
+    const geometry = this.manualGlyphGeometry();
+    const dialogInput: ManualGlyphDialogInput = {
+      isNew: true,
+      geometry,
+      inputImage,
+      glyph: { origin: [this.previewX(), this.previewY()], strokes: 0 },
+    };
+    const dialogRef = this.matDialog.open(ManualGlyphDialogComponent, { data: dialogInput });
+    const res: Glyph | undefined = await rxjs.firstValueFrom(dialogRef.afterClosed());
+    if (res != null) {
+      const glyphs = [...this.manualGlyphs.data, { id: this.#lastGlyphId++, ...res }];
+      this.manualGlyphs.data = glyphs;
+      this.ocrManager.autoOcrState()?.recognizedGlyphs.set(
+        glyphs.map(({ origin, strokes }) => ({
+          // TODO: uuuhhh this doesn't work when geom changes
+          origin: [origin[0] - geometry.glyph_template_origin[0], origin[1] - geometry.glyph_template_origin[1]],
+          strokes,
+        }))
+      );
+    }
+  }
+
+  async editGlyphClick(index: number) {
+    const inputImage = this.inputImage();
+    if (inputImage === undefined) return;
+    const geometry = this.manualGlyphGeometry();
+    const origGlyph = this.manualGlyphs.data[index];
+    const dialogInput: ManualGlyphDialogInput = {
+      isNew: false,
+      geometry,
+      inputImage,
+      glyph: origGlyph,
+    };
+    const dialogRef = this.matDialog.open(ManualGlyphDialogComponent, { data: dialogInput });
+    const res: Glyph | undefined = await rxjs.firstValueFrom(dialogRef.afterClosed());
+    if (res != null) {
+      const glyphs = this.manualGlyphs.data.with(index, { id: origGlyph.id, ...res });
+      this.manualGlyphs.data = glyphs;
+      // apparently mdc table doesn't trigger change detection on data source emissions
+      this.changeDetectorRef.markForCheck();
+      this.ocrManager.autoOcrState()?.recognizedGlyphs.set(
+        glyphs.map(({ origin, strokes }) => ({
+          // TODO: uuuhhh this doesn't work when geom changes
+          origin: [origin[0] - geometry.glyph_template_origin[0], origin[1] - geometry.glyph_template_origin[1]],
+          strokes,
+        }))
+      );
+    }
+  }
+
+  deleteGlyphClick(index: number) {
+    const geometry = this.manualGlyphGeometry();
+    const glyphs = this.manualGlyphs.data.toSpliced(index, 1);
+    this.manualGlyphs.data = glyphs;
+    this.ocrManager.autoOcrState()?.recognizedGlyphs.set(
+      glyphs.map(({ origin, strokes }) => ({
+        // TODO: uuuhhh this doesn't work when geom changes
+        origin: [origin[0] - geometry.glyph_template_origin[0], origin[1] - geometry.glyph_template_origin[1]],
+        strokes,
+      }))
+    );
+  }
+
+  readonly manualGlyphsTableTrackBy: TrackByFunction<{ readonly id: number; }> = (_i, { id }) => id;
 }
 
 const fb = new FormBuilder().nonNullable;

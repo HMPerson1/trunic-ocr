@@ -1,3 +1,4 @@
+@let autoOcrState_ = autoOcrState();
 <mat-toolbar>
   <span>Trunic OCR</span>
   @defer (on immediate; hydrate on immediate) {
@@ -10,15 +11,19 @@
     </mat-select>
   </mat-form-field>
   <span class="toolbar-spacer"></span>
-  <button mat-stroked-button (click)="resetOcr()" [disabled]="autoOcrState() === undefined">Reset</button>
+  <button mat-stroked-button (click)="resetOcr()" [disabled]="autoOcrState_ === undefined">Reset</button>
   <mat-button-toggle-group aria-label="mode" [(value)]="autoMode">
-    <mat-button-toggle [value]="true">Auto</mat-button-toggle>
-    <mat-button-toggle [value]="false">Manual</mat-button-toggle>
+    <mat-button-toggle [value]="true" [disabled]="!(autoMode() === true || autoOcrState_ === undefined)">
+      Auto
+    </mat-button-toggle>
+    <mat-button-toggle [value]="false"
+      [disabled]="!(autoMode() === false || autoOcrState_ === undefined || autoOcrState_.done())">
+      Manual
+    </mat-button-toggle>
   </mat-button-toggle-group>
   <button mat-icon-button appInfoDialogOpenButton matTooltip="About"><mat-icon>info</mat-icon></button>
   }
 </mat-toolbar>
-@let autoOcrState_ = autoOcrState();
 <mat-progress-bar [mode]="autoOcrState_ && autoOcrState_.ocrProgress() === undefined ? 'query' : 'determinate'"
   [value]="autoOcrState_?.ocrProgress() ?? 0" />
 <div class="content">
@@ -73,7 +78,9 @@
   </div>
   @if (!autoMode()) {
   @defer (on immediate) {
+  <div class="panel-scroller">
     <app-ocr-manual-control-panel />
+  </div>
   }
   }
 </div>

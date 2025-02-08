@@ -69,7 +69,7 @@ export class AppComponent {
   }
 
   async startOcr(blob: Promise<Blob>) {
-    (await this.#ocrManagerP).startOcr(blob);
+    (await this.#ocrManagerP).startOcr(blob, this.autoMode());
   }
 
   async resetOcr() {

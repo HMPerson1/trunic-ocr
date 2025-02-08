@@ -50,9 +50,11 @@ mat-toolbar {
   }
 }
 
-app-ocr-manual-control-panel {
+.panel-scroller {
   height: 100%;
-  width: 400px;
+  width: 440px;
+  contain: strict;
+  overflow-y: scroll;
 
   border-left: 1px solid var(--mat-sys-outline-variant);
 }
