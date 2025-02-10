@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Injector, afterNextRender, computed, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Injector, afterNextRender, computed, signal, viewChild } from '@angular/core';
 import { EventPhase } from '@angular/core/primitives/event-dispatch';
 import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
@@ -13,7 +13,7 @@ import { example_inputs } from './example-inputs.json';
 import { ImageRendererCanvasComponent } from './image-renderer-canvas/image-renderer-canvas.component';
 import { InfoDialogOpenButtonDirective } from './info-dialog/info-dialog-open-button.directive';
 import { ImageExtToMimeTypePipe } from './misc/image-ext-to-mime-type.pipe';
-import type { AutoOcrState, OcrManagerService } from './ocr-manager/ocr-manager.service';
+import type { OcrState, OcrManagerService } from './ocr-manager/ocr-manager.service';
 import { PyworkEarlyService } from './ocr-manager/pywork-early.service';
 import { OcrManualControlPanelComponent } from "./ocr-manual-control-panel/ocr-manual-control-panel.component";
 import { OcrOverlayComponent } from "./ocr-overlay/ocr-overlay.component";
@@ -34,11 +34,13 @@ export class AppComponent {
   readonly dragActive = signal(false);
   readonly pronctnSystem = signal(PRONUNCIATION_SYSTEMS[0]);
   readonly autoMode = signal(false);
-  readonly autoOcrState = computed<AutoOcrState | undefined>(() => this.#ocrManager()?.autoOcrState());
+  readonly autoOcrState = computed<OcrState | undefined>(() => this.#ocrManager()?.autoOcrState());
   readonly hydrationDone = signal(false);
 
   readonly #ocrManager = signal<OcrManagerService | undefined>(undefined);
   readonly #ocrManagerP: Promise<OcrManagerService>;
+
+  private readonly manualPanel = viewChild<OcrManualControlPanelComponent>('manualPanel');
 
   constructor(
     injector: Injector,
@@ -69,10 +71,19 @@ export class AppComponent {
   }
 
   async startOcr(blob: Promise<Blob>) {
-    (await this.#ocrManagerP).startOcr(blob, this.autoMode());
+    const ocrManager = await this.#ocrManagerP;
+    if (!this.autoMode()) {
+      const panel = this.manualPanel();
+      if (panel === undefined) throw new Error('manual control panel component missing');
+      ocrManager.startOcr(blob, { geometry: panel.manualGlyphGeometry, glyphs: panel.manualGlyphsDisplay });
+    } else {
+      ocrManager.startOcr(blob);
+    }
   }
 
   async resetOcr() {
+    // janky hack but ehhhhhh
+    this.autoMode.set(true);
     (await this.#ocrManagerP).reset();
   }
 

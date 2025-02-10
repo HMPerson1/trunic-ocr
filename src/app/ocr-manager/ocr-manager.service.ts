@@ -1,4 +1,4 @@
-import { computed, Injectable, signal } from '@angular/core';
+import { computed, Injectable, signal, type Signal, type WritableSignal } from '@angular/core';
 import { pipe } from 'effect';
 import * as Cause from 'effect/Cause';
 import * as E from 'effect/Effect';
@@ -16,25 +16,44 @@ export class OcrManagerService {
   constructor(private readonly pywork: PyworkService) { }
 
   readonly #workMutex = E.runSync(E.makeSemaphore(1));
-  readonly #autoOcrState = signal<{ state: AutoOcrState, fiber: Fiber.RuntimeFiber<void, any> } | undefined>(undefined);
+  readonly #autoOcrState = signal<InternalOcrState | undefined>(undefined);
   readonly autoOcrState = computed(() => this.#autoOcrState()?.state);
 
-  startOcr(blob_: Promise<Blob>, fullAuto: boolean) {
+  startOcr(blob_: Promise<Blob>, manual?: { geometry: Signal<GlyphGeometry | undefined>, glyphs: Signal<ReadonlyArray<Glyph>> }) {
     this.#stopPrevOcr();
 
-    const state = new AutoOcrState();
-    const fiber = E.runFork(pipe(
-      this.doAutoOcr(state, blob_, fullAuto),
-      E.scoped,
-      this.#workMutex.withPermits(1),
-    ));
-    this.#autoOcrState.set({ state, fiber });
+    const internalState: InternalOcrState = (() => {
+      if (manual !== undefined) {
+        const state = new ManualOcrState(manual.geometry, manual.glyphs);
+        const fiber = E.runFork(pipe(
+          E.gen(this, function* () {
+            const [pyImage, setDisplayP] = yield* this.loadImage(state.imageRenderable, blob_);
+            state.ocrProgress.set(100);
+            yield* Fiber.join(setDisplayP);
+            yield* E.never;
+          }),
+          E.scoped,
+          this.#workMutex.withPermits(1),
+        ));
+        return { state, fiber };
+      } else {
+        const state = new AutoOcrState();
+        const fiber = E.runFork(pipe(
+          this.doAutoOcr(state, blob_),
+          E.scoped,
+          this.#workMutex.withPermits(1),
+        ));
+        return { state, fiber };
+      }
+    })();
 
-    fiber.addObserver(e => {
+    this.#autoOcrState.set(internalState);
+
+    internalState.fiber.addObserver(e => {
       if (Exit.isFailure(e) && !Exit.isInterrupted(e)) {
         // clear state on image-load failure
         const prevState = this.#autoOcrState();
-        if (prevState?.fiber === fiber && prevState.state.imageRenderable() === undefined) {
+        if (prevState?.fiber === internalState.fiber && prevState.state.imageRenderable() === undefined) {
           this.reset();
         }
 
@@ -56,7 +75,31 @@ export class OcrManagerService {
     this.#autoOcrState.set(undefined);
   }
 
-  readonly doAutoOcr = (state: AutoOcrState, blob_: Promise<Blob>, fullAuto: boolean) => E.gen(this, function* () {
+  readonly doAutoOcr = (state: AutoOcrState, blob_: Promise<Blob>) => E.gen(this, function* () {
+    const [pyImage, setDisplayP] = yield* this.loadImage(state.imageRenderable, blob_);
+
+    yield* Stream.runForEach(this.pywork.oneshotRecognize(pyImage), ([p, v]) => {
+      state.ocrProgress.set(p * 100);
+      if (v === undefined) return E.void;
+      switch (v._tag) {
+        case 'a':
+          state.recognizedGeometry.set(v.v);
+          break;
+        case 'b':
+          state.recognizedGlyphs.update(prev => [...prev, v.v]);
+          break;
+        default:
+          const _a: never = v;
+      }
+      return E.void;
+    });
+
+    yield* Fiber.join(setDisplayP);
+    state.done.set(true);
+    yield* E.never;
+  });
+
+  readonly loadImage = (imageRenderable: WritableSignal<ImageBitmap | undefined>, blob_: Promise<Blob>) => E.gen(this, function* () {
     const blob = yield* E.promise(() => blob_);
 
     // race python-opencv decode and browser decode
@@ -74,7 +117,7 @@ export class OcrManagerService {
         E.flatMap(pyDecode => this.pywork.decoded2bitmap(pyDecode)),
         E.mapErrorCause(e2 => Cause.parallel(Cause.fail(e1), e2)),
       )),
-      E.map(v => state.imageRenderable.set(v)),
+      E.map(v => imageRenderable.set(v)),
     ));
 
     const pyImage = yield* E.catchAll(
@@ -86,40 +129,36 @@ export class OcrManagerService {
       )
     );
 
-    if (fullAuto) {
-      yield* Stream.runForEach(this.pywork.oneshotRecognize(pyImage), ([p, v]) => {
-        state.ocrProgress.set(p * 100);
-        if (v === undefined) return E.void;
-        switch (v._tag) {
-          case 'a':
-            state.recognizedGeometry.set(v.v);
-            break;
-          case 'b':
-            state.recognizedGlyphs.update(prev => [...prev, v.v]);
-            break;
-          default:
-            const _a: never = v;
-        }
-        return E.void;
-      });
-    } else {
-      state.ocrProgress.set(100);
-    }
-
-    yield* Fiber.join(setDisplayP);
-    if (fullAuto) {
-      state.done.set(true);
-    }
-    yield* E.never;
+    return [pyImage, setDisplayP] as const;
   });
 }
 
-export class AutoOcrState {
+type InternalOcrState = {
+  state: OcrState;
+  fiber: Fiber.RuntimeFiber<void, any>;
+};
+
+export type OcrState = {
+  readonly imageRenderable: Signal<ImageBitmap | undefined>;
+  readonly ocrProgress: Signal<undefined | number>;
+  readonly recognizedGeometry: Signal<GlyphGeometry | undefined>;
+  readonly recognizedGlyphs: Signal<ReadonlyArray<Glyph>>;
+  readonly done: Signal<boolean>;
+}
+
+class BaseOcrState implements Pick<OcrState, 'imageRenderable' | 'ocrProgress' | 'done'> {
   readonly imageRenderable = signal<ImageBitmap | undefined>(undefined);
   readonly ocrProgress = signal<undefined | number>(undefined);
+  readonly done = signal(false);
+}
+
+class ManualOcrState extends BaseOcrState implements OcrState {
+  constructor(readonly recognizedGeometry: Signal<GlyphGeometry | undefined>, readonly recognizedGlyphs: Signal<ReadonlyArray<Glyph>>) { super(); }
+}
+
+class AutoOcrState extends BaseOcrState implements OcrState {
   readonly recognizedGeometry = signal<GlyphGeometry | undefined>(undefined);
   readonly recognizedGlyphs = signal<ReadonlyArray<Glyph>>([]);
-  readonly done = signal<boolean>(false);
 }
 
 export type GlyphGeometryPrim = {

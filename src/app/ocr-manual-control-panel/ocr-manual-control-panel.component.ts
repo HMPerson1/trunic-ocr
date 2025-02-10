@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, DestroyRef, signal, type TrackByFunction } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, DestroyRef, signal, type Signal, type TrackByFunction } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButton, MatIconButton } from '@angular/material/button';
@@ -51,10 +51,20 @@ export class OcrManualControlPanelComponent {
 
   readonly inputImage;
 
+  readonly manualGlyphs = new rxjs.BehaviorSubject<ReadonlyArray<Glyph & { readonly id: number }>>([]);
+  readonly #manaulGlyphsSig = toSignal(this.manualGlyphs, { initialValue: [] });
+  readonly manualGlyphsDisplay: Signal<ReadonlyArray<Glyph>> = computed(() => {
+    const geometry = this.manualGlyphGeometry();
+    return this.#manaulGlyphsSig().map(({ origin, strokes }) => ({
+      origin: [origin[0] - geometry.glyph_template_origin[0], origin[1] - geometry.glyph_template_origin[1]],
+      strokes,
+    }));
+  });
+
   constructor(
     private readonly matDialog: MatDialog,
     private readonly changeDetectorRef: ChangeDetectorRef,
-    private readonly ocrManager: OcrManagerService,
+    ocrManager: OcrManagerService,
     destroyRef: DestroyRef,
   ) {
     this.inputImage = computed(() => ocrManager.autoOcrState()?.imageRenderable());
@@ -62,14 +72,11 @@ export class OcrManualControlPanelComponent {
     this.manualGlyphGeometry = signal(makeFullGlyphGeometry(this.geometryForm.getRawValue()));
     const subn = this.geometryForm.valueChanges.subscribe(() => {
       if (!this.geometryForm.valid) return;
-      const geom = makeFullGlyphGeometry(this.geometryForm.getRawValue());
-      this.manualGlyphGeometry.set(geom);
-      ocrManager.autoOcrState()?.recognizedGeometry.set(geom);
+      this.manualGlyphGeometry.set(makeFullGlyphGeometry(this.geometryForm.getRawValue()));
     });
     destroyRef.onDestroy(() => subn.unsubscribe());
   }
 
-  readonly manualGlyphs = new MatTableDataSource<Glyph & { readonly id: number }>();
   #lastGlyphId = 0;
 
   async addGlyphClick() {
@@ -85,15 +92,8 @@ export class OcrManualControlPanelComponent {
     const dialogRef = this.matDialog.open(ManualGlyphDialogComponent, { data: dialogInput });
     const res: Glyph | undefined = await rxjs.firstValueFrom(dialogRef.afterClosed());
     if (res != null) {
-      const glyphs = [...this.manualGlyphs.data, { id: this.#lastGlyphId++, ...res }];
-      this.manualGlyphs.data = glyphs;
-      this.ocrManager.autoOcrState()?.recognizedGlyphs.set(
-        glyphs.map(({ origin, strokes }) => ({
-          // TODO: uuuhhh this doesn't work when geom changes
-          origin: [origin[0] - geometry.glyph_template_origin[0], origin[1] - geometry.glyph_template_origin[1]],
-          strokes,
-        }))
-      );
+      const glyphs = [...this.manualGlyphs.value, { id: this.#lastGlyphId++, ...res }];
+      this.manualGlyphs.next(glyphs);
     }
   }
 
@@ -101,7 +101,7 @@ export class OcrManualControlPanelComponent {
     const inputImage = this.inputImage();
     if (inputImage === undefined) return;
     const geometry = this.manualGlyphGeometry();
-    const origGlyph = this.manualGlyphs.data[index];
+    const origGlyph = this.manualGlyphs.value[index];
     const dialogInput: ManualGlyphDialogInput = {
       isNew: false,
       geometry,
@@ -111,31 +111,16 @@ export class OcrManualControlPanelComponent {
     const dialogRef = this.matDialog.open(ManualGlyphDialogComponent, { data: dialogInput });
     const res: Glyph | undefined = await rxjs.firstValueFrom(dialogRef.afterClosed());
     if (res != null) {
-      const glyphs = this.manualGlyphs.data.with(index, { id: origGlyph.id, ...res });
-      this.manualGlyphs.data = glyphs;
+      const glyphs = this.manualGlyphs.value.with(index, { id: origGlyph.id, ...res });
+      this.manualGlyphs.next(glyphs);
       // apparently mdc table doesn't trigger change detection on data source emissions
       this.changeDetectorRef.markForCheck();
-      this.ocrManager.autoOcrState()?.recognizedGlyphs.set(
-        glyphs.map(({ origin, strokes }) => ({
-          // TODO: uuuhhh this doesn't work when geom changes
-          origin: [origin[0] - geometry.glyph_template_origin[0], origin[1] - geometry.glyph_template_origin[1]],
-          strokes,
-        }))
-      );
     }
   }
 
   deleteGlyphClick(index: number) {
-    const geometry = this.manualGlyphGeometry();
-    const glyphs = this.manualGlyphs.data.toSpliced(index, 1);
-    this.manualGlyphs.data = glyphs;
-    this.ocrManager.autoOcrState()?.recognizedGlyphs.set(
-      glyphs.map(({ origin, strokes }) => ({
-        // TODO: uuuhhh this doesn't work when geom changes
-        origin: [origin[0] - geometry.glyph_template_origin[0], origin[1] - geometry.glyph_template_origin[1]],
-        strokes,
-      }))
-    );
+    const glyphs = this.manualGlyphs.value.toSpliced(index, 1);
+    this.manualGlyphs.next(glyphs);
   }
 
   readonly manualGlyphsTableTrackBy: TrackByFunction<{ readonly id: number; }> = (_i, { id }) => id;

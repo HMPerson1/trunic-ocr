@@ -69,4 +69,10 @@ section {
 
 table {
   font-variant-numeric: tabular-nums;
+
+  & .mat-column-x,
+  & .mat-column-y,
+  & .mat-column-e {
+    text-align: right;
+  }
 }
