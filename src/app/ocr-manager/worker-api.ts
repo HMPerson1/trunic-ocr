@@ -1,7 +1,10 @@
 import * as S from "effect/Schema";
 import * as Transferable from "@effect/platform/Transferable";
 
-const Transferable_ImageBitmap = Transferable.schema(S.instanceOf(ImageBitmap), b => [b])
+// apparently sometimes this file fails to be removed from the server bundle
+const ImageBitmap_ = typeof ImageBitmap === 'undefined' ? class { } as typeof ImageBitmap : ImageBitmap;
+
+const Transferable_ImageBitmap = Transferable.schema(S.instanceOf(ImageBitmap_), b => [b])
 
 const GlyphSchema = S.Struct({ strokes: S.Number, origin: S.Tuple(S.Number, S.Number), });
 export type Glyph = S.Schema.Type<typeof GlyphSchema>;
@@ -37,7 +40,7 @@ export class Decoded2Bitmap extends S.TaggedRequest<Decoded2Bitmap>()('decoded2b
 export class LoadBitmap extends S.TaggedRequest<LoadBitmap>()('loadBitmap', {
   failure: S.Never,
   success: PyWorkImageRefSchema,
-  payload: { imgBmp: S.instanceOf(ImageBitmap) }, // don't transfer
+  payload: { imgBmp: S.instanceOf(ImageBitmap_) }, // don't transfer
 }) { }
 
 export const OneshotRecognizeProgressData = S.Union(
