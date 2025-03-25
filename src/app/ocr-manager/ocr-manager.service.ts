@@ -1,4 +1,4 @@
-import { computed, Injectable, signal, type Signal, type WritableSignal } from '@angular/core';
+import { computed, Injectable, signal, type WritableSignal } from '@angular/core';
 import { pipe } from 'effect';
 import * as Cause from 'effect/Cause';
 import * as E from 'effect/Effect';
@@ -7,7 +7,7 @@ import * as Fiber from 'effect/Fiber';
 import * as Stream from 'effect/Stream';
 import { PyworkService } from './pywork.service';
 import { bitmapResource } from './utils';
-import type { Glyph, GlyphGeometry } from './worker-api';
+import type { Glyph, GlyphGeometry, GlyphGeometryPrim } from './worker-api';
 
 @Injectable({
   providedIn: 'root'
@@ -19,12 +19,12 @@ export class OcrManagerService {
   readonly #autoOcrState = signal<InternalOcrState | undefined>(undefined);
   readonly autoOcrState = computed(() => this.#autoOcrState()?.state);
 
-  startOcr(blob_: Promise<Blob>, manual?: { geometry: Signal<GlyphGeometry | undefined>, glyphs: Signal<ReadonlyArray<Glyph>> }) {
+  startOcr(blob_: Promise<Blob>, manual: boolean) {
     this.#stopPrevOcr();
 
     const internalState: InternalOcrState = (() => {
-      if (manual !== undefined) {
-        const state = new ManualOcrState(manual.geometry, manual.glyphs);
+      if (manual) {
+        const state = new BaseOcrState();
         const fiber = E.runFork(pipe(
           E.gen(this, function* () {
             const [pyImage, setDisplayP] = yield* this.loadImage(state.imageRenderable, blob_);
@@ -83,10 +83,11 @@ export class OcrManagerService {
       if (v === undefined) return E.void;
       switch (v._tag) {
         case 'a':
-          state.recognizedGeometry.set(v.v);
+          state.recognizedGeometry.set(v.v[1]);
+          state.recognizedGeometryPrim = v.v[0];
           break;
         case 'b':
-          state.recognizedGlyphs.update(prev => [...prev, v.v]);
+          state.recognizedGlyphs.update(prev => [...prev, { id: prev.length, ...v.v }]);
           break;
         default:
           const _a: never = v;
@@ -133,42 +134,27 @@ export class OcrManagerService {
   });
 }
 
+export type UiGlyph = Glyph & { readonly id: number };
+
 type InternalOcrState = {
   state: OcrState;
   fiber: Fiber.RuntimeFiber<void, any>;
 };
 
-export type OcrState = {
-  readonly imageRenderable: Signal<ImageBitmap | undefined>;
-  readonly ocrProgress: Signal<undefined | number>;
-  readonly recognizedGeometry: Signal<GlyphGeometry | undefined>;
-  readonly recognizedGlyphs: Signal<ReadonlyArray<Glyph>>;
-  readonly done: Signal<boolean>;
-}
-
-class BaseOcrState implements Pick<OcrState, 'imageRenderable' | 'ocrProgress' | 'done'> {
+class BaseOcrState {
   readonly imageRenderable = signal<ImageBitmap | undefined>(undefined);
   readonly ocrProgress = signal<undefined | number>(undefined);
   readonly done = signal(false);
 }
 
-class ManualOcrState extends BaseOcrState implements OcrState {
-  constructor(readonly recognizedGeometry: Signal<GlyphGeometry | undefined>, readonly recognizedGlyphs: Signal<ReadonlyArray<Glyph>>) { super(); }
-}
-
-class AutoOcrState extends BaseOcrState implements OcrState {
+class AutoOcrState extends BaseOcrState {
   readonly recognizedGeometry = signal<GlyphGeometry | undefined>(undefined);
-  readonly recognizedGlyphs = signal<ReadonlyArray<Glyph>>([]);
+  /* rw */ recognizedGeometryPrim?: GlyphGeometryPrim;
+  readonly recognizedGlyphs = signal<ReadonlyArray<UiGlyph>>([]);
 }
 
-export type GlyphGeometryPrim = {
-  upscale: number;
-  size: number;
-  angle: number;
-  upper: number;
-  lower: number;
-  stroke_width: number;
-};
+// ts aaaaaa :(
+export type OcrState = AutoOcrState | (BaseOcrState & Partial<AutoOcrState>);
 
 export function makeFullGlyphGeometry(val: GlyphGeometryPrim): GlyphGeometry {
   const a = val.angle * Math.PI / 180;
@@ -177,22 +163,22 @@ export function makeFullGlyphGeometry(val: GlyphGeometryPrim): GlyphGeometry {
   const glyph_width = grid_x * 2;
   const glyph_height = val.lower + val.upper + val.size * 2 + grid_y * 2;
   const ox = Math.floor(val.stroke_width / 2) + val.upscale;
-  const oy = val.upper + val.size + grid_y + Math.floor(val.stroke_width / 2) + val.upscale;
-  const pu00x = ox;
+  const oy = Math.floor(val.upper + val.size + grid_y + Math.floor(val.stroke_width / 2) + val.upscale);
+  const pu00x = ox + val.h_nudge;
   const pu00y = oy - val.upper - val.size;
-  const pu10x = ox + grid_x;
+  const pu10x = pu00x + grid_x;
   const pu10y = pu00y - grid_y;
   const pu01x = pu10x;
   const pu01y = pu00y + grid_y;
-  const pu11x = ox + grid_x * 2;
+  const pu11x = pu00x + grid_x * 2;
   const pu11y = pu00y;
-  const pl00x = ox;
+  const pl00x = ox + val.h_nudge;
   const pl00y = oy + val.lower + val.size;
-  const pl10x = ox + grid_x;
+  const pl10x = pl00x + grid_x;
   const pl10y = pl00y - grid_y;
   const pl01x = pl10x;
   const pl01y = pl00y + grid_y;
-  const pl11x = ox + grid_x * 2;
+  const pl11x = pl00x + grid_x * 2;
   const pl11y = pl00y;
   return {
     upscale: val.upscale,

@@ -12,7 +12,7 @@ import * as Scope from "effect/Scope";
 import * as Stream from 'effect/Stream';
 import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.mjs";
 import type { PyodideInterface } from "pyodide";
-import type { PyBuffer, PyBufferView, PyGenerator, PyIterator, PyProxy } from "pyodide/ffi";
+import type { PyBuffer, PyBufferView, PyGenerator, PyProxy } from "pyodide/ffi";
 import { iotaChannel } from "./utils";
 import { WorkerMessage, type OneshotRecognizeProgress, type OneshotRecognizeProgressData, type PyWorkImageRef, type PyWorkRef } from "./worker-api";
 
@@ -63,13 +63,13 @@ const doOneshotRecognizeOnce = (imgRef: PyWorkImageRef, lax: boolean): Stream.St
       doFindGlyphsImpl(proxyStore.get(imgRef), lax, ocrCore),
       Channel.provideService(Scope.Scope, scope),
       Channel.mapOut(p => mkOsRecPrg(p / 2, undefined)),
-      Channel.flatMap(([strokesPx, geomPx, tmplPx, originsPx]) => {
+      Channel.flatMap(([strokesPx, geomPrim, geomPx, tmplPx, originsPx]) => {
         const geomPodPx = geomPx.to_pod();
         const geomData = geomPodPx.toJs({ create_pyproxies: false, dict_converter: Object.fromEntries });
         geomPodPx.destroy();
         const glyphsCount = originsPx.length;
         return Channel.zipRight(
-          Channel.write(mkOsRecPrg(0.5, { _tag: 'a', v: geomData })),
+          Channel.write(mkOsRecPrg(0.5, { _tag: 'a', v: [geomPrim, geomData] })),
           pipe(
             acqRelPyGenerator(E.succeed(ocrCore.fitGlyphs(strokesPx, geomPx, tmplPx, originsPx))),
             E.map(pyGen => pipe(
@@ -101,7 +101,7 @@ const doOneshotRecognizeOnce = (imgRef: PyWorkImageRef, lax: boolean): Stream.St
 
 const mkOsRecPrg = (p: number, v: OneshotRecognizeProgressData): OneshotRecognizeProgress => [p, v];
 
-const doFindGlyphsImpl = (pyimage: PyProxy, lax: boolean, ocrCore: any): Channel.Channel<number, unknown, never, unknown, readonly [any, any, any, any], unknown, Scope.Scope> =>
+const doFindGlyphsImpl = (pyimage: PyProxy, lax: boolean, ocrCore: any): Channel.Channel<number, unknown, never, unknown, readonly [any, any, any, any, any], unknown, Scope.Scope> =>
   pipe(
     acqRelPyGenerator(E.succeed(ocrCore.findGlyphs.callKwargs(pyimage, lax ? { lax: true } : {}))),
     E.map(pyGen => pipe(
@@ -113,14 +113,17 @@ const doFindGlyphsImpl = (pyimage: PyProxy, lax: boolean, ocrCore: any): Channel
       Channel.zipRight(E.uninterruptible(E.gen(function* () {
         const iterRet: IteratorResult<any, PyProxy> = pyGen.next();
         if (!iterRet.done) throw new Error("bad py yield");
-        const [strokesPx_, geomPx_, tmplPx_, originsPx_] = iterRet.value.toJs({ depth: 1 });
+        const [strokesPx_, geomPrimPx_, geomPx_, tmplPx_, originsPx_] = iterRet.value.toJs({ depth: 1 });
         iterRet.value.destroy();
 
         const strokesPx = yield* acqRelPyProxy(E.succeed(strokesPx_));
         const geomPx = yield* acqRelPyProxy(E.succeed(geomPx_));
         const tmplPx = yield* acqRelPyProxy(E.succeed(tmplPx_));
         const originsPx = yield* acqRelPyProxy(E.succeed(originsPx_));
-        return [strokesPx, geomPx, tmplPx, originsPx] as const;
+
+        const geomPrim = geomPrimPx_.toJs({ create_pyproxies: false, dict_converter: Object.fromEntries });
+        geomPrimPx_.destroy();
+        return [strokesPx, geomPrim, geomPx, tmplPx, originsPx] as const;
       }))),
     )),
     Channel.unwrapScoped,

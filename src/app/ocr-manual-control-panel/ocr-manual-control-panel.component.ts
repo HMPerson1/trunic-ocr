@@ -6,11 +6,11 @@ import { MatDialog } from '@angular/material/dialog';
 import { MAT_FORM_FIELD_DEFAULT_OPTIONS, MatFormFieldModule } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatInput } from '@angular/material/input';
-import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatTableModule } from '@angular/material/table';
 import * as rxjs from 'rxjs';
 import { CroppedImageRendererCanvasComponent } from '../cropped-image-renderer-canvas/cropped-image-renderer-canvas.component';
 import { ManualGlyphDialogComponent, type ManualGlyphDialogInput } from '../manual-glyph-dialog/manual-glyph-dialog.component';
-import { makeFullGlyphGeometry, OcrManagerService } from '../ocr-manager/ocr-manager.service';
+import { makeFullGlyphGeometry, OcrManagerService, type UiGlyph } from '../ocr-manager/ocr-manager.service';
 import type { Glyph } from '../ocr-manager/worker-api';
 import { TrunicGlyphImageComponent } from "../trunic-glyph-image/trunic-glyph-image.component";
 import { DisplayStrokesPipe } from './display-strokes.pipe';
@@ -26,11 +26,12 @@ import { DisplayStrokesPipe } from './display-strokes.pipe';
 export class OcrManualControlPanelComponent {
   readonly geometryForm = fb.group({
     upscale: fb.control(3, [Validators.min(1)]),
-    size: fb.control(90, [Validators.min(0)]),
+    stroke_width: fb.control(18, [Validators.min(1)]),
     angle: fb.control(30, [Validators.min(0), Validators.max(90)]),
+    size: fb.control(90, [Validators.min(0)]),
     upper: fb.control(0),
     lower: fb.control(0),
-    stroke_width: fb.control(18, [Validators.min(1)]),
+    h_nudge: fb.control(0),
   });
   readonly manualGlyphGeometry;
 
@@ -51,11 +52,12 @@ export class OcrManualControlPanelComponent {
 
   readonly inputImage;
 
-  readonly manualGlyphs = new rxjs.BehaviorSubject<ReadonlyArray<Glyph & { readonly id: number }>>([]);
-  readonly #manaulGlyphsSig = toSignal(this.manualGlyphs, { initialValue: [] });
-  readonly manualGlyphsDisplay: Signal<ReadonlyArray<Glyph>> = computed(() => {
+  readonly manualGlyphs;
+  readonly #manualGlyphsSig;
+  readonly manualGlyphsDisplay: Signal<ReadonlyArray<UiGlyph>> = computed(() => {
     const geometry = this.manualGlyphGeometry();
-    return this.#manaulGlyphsSig().map(({ origin, strokes }) => ({
+    return this.#manualGlyphsSig().map(({ id, origin, strokes }) => ({
+      id,
       origin: [origin[0] - geometry.glyph_template_origin[0], origin[1] - geometry.glyph_template_origin[1]],
       strokes,
     }));
@@ -75,6 +77,24 @@ export class OcrManualControlPanelComponent {
       this.manualGlyphGeometry.set(makeFullGlyphGeometry(this.geometryForm.getRawValue()));
     });
     destroyRef.onDestroy(() => subn.unsubscribe());
+
+    const initGlyphs = (() => {
+      const initState = ocrManager.autoOcrState();
+      const geom = initState?.recognizedGeometry?.();
+      const initGlyphs = initState?.recognizedGlyphs;
+      const geomPrim = initState?.recognizedGeometryPrim;
+      if (initState === undefined || geom === undefined || initGlyphs === undefined || geomPrim === undefined) return [];
+      this.geometryForm.setValue(geomPrim);
+      const ret = initGlyphs().map(({ id, origin, strokes }) => ({ id, origin: [origin[0] + geom.glyph_template_origin[0], origin[1] + geom.glyph_template_origin[1]] as const, strokes }));
+      if (ret.length > 0) {
+        this.previewXCtrl.setValue(ret[0].origin[0]);
+        this.previewYCtrl.setValue(ret[0].origin[1]);
+      }
+      return ret;
+    })();
+
+    this.manualGlyphs = new rxjs.BehaviorSubject<ReadonlyArray<UiGlyph>>(initGlyphs);
+    this.#manualGlyphsSig = toSignal(this.manualGlyphs, { requireSync: true });
   }
 
   #lastGlyphId = 0;

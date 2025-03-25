@@ -1,4 +1,4 @@
-@for (glyph of glyphs(); track $index) {
+@for (glyph of glyphs(); track glyph.id) {
 <details name="glyph" [style.top.px]="glyph.origin[1]" [style.left.px]="glyph.origin[0]"
     (toggle)="onGlyphToggle($event, glyph.strokes)">
     <summary>

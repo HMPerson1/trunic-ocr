@@ -36,9 +36,9 @@
       <canvas app-image-renderer-canvas class="img-display" [data]="imageRenderable_"
         #imgDisplay="app-image-renderer-canvas"></canvas>
       @defer (on immediate) {
-      @if (autoOcrState_.recognizedGeometry(); as geometry) {
-      <app-ocr-overlay [geometry]="geometry" [glyphs]="autoOcrState_.recognizedGlyphs()"
-        [pronctnSystem]="pronctnSystem()" [style.transform]="imgDisplay.imgTransform().scale(1/geometry.upscale)" />
+      @if (geometry(); as geometry_) {
+      <app-ocr-overlay [geometry]="geometry_" [glyphs]="glyphs()" [pronctnSystem]="pronctnSystem()"
+        [style.transform]="imgDisplay.imgTransform().scale(1/geometry_.upscale)" />
       }
       }
       } @else {

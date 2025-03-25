@@ -19,6 +19,16 @@ const GlyphGeometrySchema = S.Struct({
   circle_center: S.Tuple(S.Number, S.Number),
 });
 export type GlyphGeometry = S.Schema.Type<typeof GlyphGeometrySchema>;
+const GlyphGeometryPrimSchema = S.Struct({
+  upscale: S.Number,
+  stroke_width: S.Number,
+  angle: S.Number,
+  size: S.Number,
+  upper: S.Number,
+  lower: S.Number,
+  h_nudge: S.Number,
+});
+export type GlyphGeometryPrim = S.Schema.Type<typeof GlyphGeometryPrimSchema>;
 
 const PyWorkRefSchema = S.Number.pipe(S.brand('PyWorkRef'));
 export type PyWorkRef = S.Schema.Type<typeof PyWorkRefSchema>;
@@ -44,7 +54,7 @@ export class LoadBitmap extends S.TaggedRequest<LoadBitmap>()('loadBitmap', {
 }) { }
 
 export const OneshotRecognizeProgressData = S.Union(
-  S.TaggedStruct('a', { v: GlyphGeometrySchema }),
+  S.TaggedStruct('a', { v: S.Tuple(GlyphGeometryPrimSchema, GlyphGeometrySchema) }),
   S.TaggedStruct('b', { v: GlyphSchema }),
   S.Undefined,
 );

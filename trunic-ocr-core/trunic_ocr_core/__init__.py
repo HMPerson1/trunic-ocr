@@ -86,7 +86,7 @@ def findGlyphs(src_raw: NDArray_u8, *, lax=False):
         ),
         axis=1,
     )
-    grid1, grid2, offset_u, offset_l = find_geometry(
+    prim_size, grid1, grid2, offset_u, offset_l = find_geometry(
         upscale,
         stroke_width,
         baselines_spec,
@@ -101,6 +101,16 @@ def findGlyphs(src_raw: NDArray_u8, *, lax=False):
     del segment_coords_raw_slant_p
     del segment_coords_raw_slant_n
     yield 12
+
+    glyph_geometry_prim = dict(
+        upscale=upscale,
+        stroke_width=stroke_width,
+        angle=int(stroke_angle),
+        size=prim_size,
+        upper=-offset_u[1] - prim_size,
+        lower=offset_l[1] - prim_size,
+        h_nudge=offset_u[0],
+    )
 
     glyph_geometry = make_glyph_geometry(
         upscale,
@@ -147,6 +157,7 @@ def findGlyphs(src_raw: NDArray_u8, *, lax=False):
     gc.collect()
     return (
         strokes_bordered,
+        glyph_geometry_prim,
         glyph_geometry,
         glyph_templates,
         glyph_origins_raw,
@@ -692,7 +703,7 @@ def find_geometry(
     offset_u[0] = offset_x
     offset_l[0] = offset_x
 
-    return grid1, grid2, offset_u, offset_l
+    return spacing_o, grid1, grid2, offset_u, offset_l
 
 
 LineSegmtSpec = tuple[tuple[float, float], tuple[float, float]]

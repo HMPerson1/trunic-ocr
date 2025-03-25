@@ -1,7 +1,8 @@
 import { Overlay, type OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { Component, input, type OnDestroy } from '@angular/core';
-import type { Glyph, GlyphGeometry } from '../ocr-manager/worker-api';
+import type { UiGlyph } from '../ocr-manager/ocr-manager.service';
+import type { GlyphGeometry } from '../ocr-manager/worker-api';
 import type { PronunciationSystem } from '../trunic-data';
 import { TrunicGlyphDetailComponent } from '../trunic-glyph-detail/trunic-glyph-detail.component';
 import { TrunicGlyphComponent } from "../trunic-glyph/trunic-glyph.component";
@@ -13,7 +14,7 @@ import { TrunicGlyphComponent } from "../trunic-glyph/trunic-glyph.component";
   styleUrl: './ocr-overlay.component.scss'
 })
 export class OcrOverlayComponent implements OnDestroy {
-  readonly glyphs = input.required<ReadonlyArray<Glyph>>();
+  readonly glyphs = input.required<ReadonlyArray<UiGlyph>>();
   readonly geometry = input.required<GlyphGeometry>();
   readonly pronctnSystem = input.required<PronunciationSystem>();
 
