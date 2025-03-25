@@ -1,7 +1,7 @@
 @use '@angular/material' as mat;
 
 :host {
-  padding: 24px;
+  padding: 24px 16px;
   display: flex;
   flex-direction: column;
 
@@ -70,9 +70,16 @@ section {
 table {
   font-variant-numeric: tabular-nums;
 
+  @include mat.table-overrides((header-container-height: 48px, footer-container-height: 44px, row-item-container-height: 44px));
+  @include mat.icon-button-overrides((state-layer-size: 32px, touch-target-display: none));
+
   & .mat-column-x,
   & .mat-column-y,
   & .mat-column-e {
     text-align: right;
+  }
+
+  & button[mat-icon-button]:first-child {
+    margin-right: 4px;
   }
 }
