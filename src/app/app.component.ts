@@ -13,9 +13,8 @@ import { example_inputs } from './example-inputs.json';
 import { ImageRendererCanvasComponent } from './image-renderer-canvas/image-renderer-canvas.component';
 import { InfoDialogOpenButtonDirective } from './info-dialog/info-dialog-open-button.directive';
 import { ImageExtToMimeTypePipe } from './misc/image-ext-to-mime-type.pipe';
-import type { OcrManagerService, OcrState, UiGlyph } from './ocr-manager/ocr-manager.service';
+import type { OcrManagerService, OcrState } from './ocr-manager/ocr-manager.service';
 import { PyworkEarlyService } from './ocr-manager/pywork-early.service';
-import type { GlyphGeometry } from './ocr-manager/worker-api';
 import { OcrManualControlPanelComponent } from "./ocr-manual-control-panel/ocr-manual-control-panel.component";
 import { OcrOverlayComponent } from "./ocr-overlay/ocr-overlay.component";
 import { PRONUNCIATION_SYSTEMS } from './trunic-data';
@@ -41,9 +40,7 @@ export class AppComponent {
   readonly #ocrManager = signal<OcrManagerService | undefined>(undefined);
   readonly #ocrManagerP: Promise<OcrManagerService>;
 
-  private readonly manualPanel = viewChild<OcrManualControlPanelComponent>('manualPanel');
-  readonly geometry = computed<GlyphGeometry | undefined>(() => this.manualPanel()?.manualGlyphGeometry() ?? this.autoOcrState()?.recognizedGeometry?.());
-  readonly glyphs = computed<ReadonlyArray<UiGlyph>>(() => this.manualPanel()?.manualGlyphsDisplay() ?? this.autoOcrState()?.recognizedGlyphs?.() ?? []);
+  readonly manualPanel = viewChild<OcrManualControlPanelComponent>('manualPanel');
 
   constructor(
     injector: Injector,

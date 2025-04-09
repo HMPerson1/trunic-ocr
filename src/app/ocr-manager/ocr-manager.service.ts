@@ -78,6 +78,7 @@ export class OcrManagerService {
   readonly doAutoOcr = (state: AutoOcrState, blob_: Promise<Blob>) => E.gen(this, function* () {
     const [pyImage, setDisplayP] = yield* this.loadImage(state.imageRenderable, blob_);
 
+    let nextGlyphId = 0;
     yield* Stream.runForEach(this.pywork.oneshotRecognize(pyImage), ([p, v]) => {
       state.ocrProgress.set(p * 100);
       if (v === undefined) return E.void;
@@ -87,7 +88,7 @@ export class OcrManagerService {
           state.recognizedGeometryPrim = v.v[0];
           break;
         case 'b':
-          state.recognizedGlyphs.update(prev => [...prev, { id: prev.length, ...v.v }]);
+          state.recognizedGlyphs.update(prev => [...prev, { id: nextGlyphId++, ...v.v }]);
           break;
         default:
           const _a: never = v;
@@ -149,7 +150,7 @@ class BaseOcrState {
 
 class AutoOcrState extends BaseOcrState {
   readonly recognizedGeometry = signal<GlyphGeometry | undefined>(undefined);
-  /* rw */ recognizedGeometryPrim?: GlyphGeometryPrim;
+  /* rw */ recognizedGeometryPrim: GlyphGeometryPrim | undefined = undefined;
   readonly recognizedGlyphs = signal<ReadonlyArray<UiGlyph>>([]);
 }
 

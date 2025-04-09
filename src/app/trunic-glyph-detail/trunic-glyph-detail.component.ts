@@ -1,5 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, output } from '@angular/core';
+import { MatIconButton } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import type { GlyphGeometry } from '../ocr-manager/worker-api';
@@ -9,13 +10,15 @@ import * as defaultGlyphGeometry from './default-glyph-geometry.json';
 
 @Component({
   selector: 'app-trunic-glyph-detail',
-  imports: [MatCardModule, NgTemplateOutlet, TrunicGlyphImageComponent, MatIconModule],
+  imports: [MatCardModule, NgTemplateOutlet, TrunicGlyphImageComponent, MatIconModule, MatIconButton],
   templateUrl: './trunic-glyph-detail.component.html',
   styleUrl: './trunic-glyph-detail.component.scss'
 })
 export class TrunicGlyphDetailComponent {
   readonly strokesPacked = input.required<number>();
   readonly pronctnSystem = input.required<trunic_data.PronunciationSystem>();
+  readonly editClick = output<void>();
+  readonly deleteClick = output<void>();
 
   readonly _dataC = computed(() => {
     const strokesC = this.strokesPacked() & 0x3F;

@@ -950,15 +950,13 @@ def fitGlyphs(
 ) -> typing.Generator[RecognizedGlyphPod, typing.Any, None]:
     upscale = glyph_geometry.upscale
     stroke_width = glyph_geometry.stroke_width
+    glyph_template_origin = glyph_geometry.glyph_template_origin
     glyph_template_shape = glyph_geometry.glyph_template_shape
     glyph_template = glyph_templates.glyphs
     glyph_template_mask = glyph_templates.mask
     glyph_template_base = glyph_templates.base
 
-    glyph_origins_raw = (
-        np.asarray(glyph_origins_raw, dtype=np.int32).reshape(-1, 2)
-        - glyph_geometry.glyph_template_origin
-    )
+    glyph_origins_raw = np.asarray(glyph_origins_raw, dtype=np.int32).reshape(-1, 2)
     all_template_offsets = (
         np.dstack(np.mgrid[: upscale * slop + 1, : upscale * slop + 1]).reshape(-1, 2)
         - (upscale * slop + 1) // 2
@@ -968,6 +966,7 @@ def fitGlyphs(
         yield fit_glyph_one(
             strokes_bordered,
             stroke_width,
+            glyph_template_origin,
             glyph_template_shape,
             glyph_template,
             glyph_template_mask,
@@ -980,6 +979,7 @@ def fitGlyphs(
 def fit_glyph_one(
     strokes_bordered: NDArray_f32,
     border_offset,
+    glyph_template_origin: NDArray_i32,
     glyph_template_shape: tuple[float, float],
     glyph_template,
     glyph_template_mask,
@@ -1000,7 +1000,7 @@ def fit_glyph_one(
         next_templates[m] = np.fmax(next_templates[m], glyph_template[stroke_is][m])
         return next_strokes, next_templates
 
-    glyph_origin_raw_bo = glyph_origin_raw + border_offset
+    glyph_origin_raw_bo = glyph_origin_raw - glyph_template_origin + border_offset
     glyph_all_offsets = [
         strokes_bordered[rect_to_slice(glyph_origin_raw_bo + o, glyph_template_shape)]
         for o in all_template_offsets

@@ -53,15 +53,7 @@ export class OcrManualControlPanelComponent {
   readonly inputImage;
 
   readonly manualGlyphs;
-  readonly #manualGlyphsSig;
-  readonly manualGlyphsDisplay: Signal<ReadonlyArray<UiGlyph>> = computed(() => {
-    const geometry = this.manualGlyphGeometry();
-    return this.#manualGlyphsSig().map(({ id, origin, strokes }) => ({
-      id,
-      origin: [origin[0] - geometry.glyph_template_origin[0], origin[1] - geometry.glyph_template_origin[1]],
-      strokes,
-    }));
-  });
+  readonly manualGlyphsDisplay;
 
   constructor(
     private readonly matDialog: MatDialog,
@@ -80,12 +72,11 @@ export class OcrManualControlPanelComponent {
 
     const initGlyphs = (() => {
       const initState = ocrManager.autoOcrState();
-      const geom = initState?.recognizedGeometry?.();
       const initGlyphs = initState?.recognizedGlyphs;
       const geomPrim = initState?.recognizedGeometryPrim;
-      if (initState === undefined || geom === undefined || initGlyphs === undefined || geomPrim === undefined) return [];
+      if (initGlyphs === undefined || geomPrim === undefined) return [];
       this.geometryForm.setValue(geomPrim);
-      const ret = initGlyphs().map(({ id, origin, strokes }) => ({ id, origin: [origin[0] + geom.glyph_template_origin[0], origin[1] + geom.glyph_template_origin[1]] as const, strokes }));
+      const ret = initGlyphs();
       if (ret.length > 0) {
         this.previewXCtrl.setValue(ret[0].origin[0]);
         this.previewYCtrl.setValue(ret[0].origin[1]);
@@ -94,7 +85,7 @@ export class OcrManualControlPanelComponent {
     })();
 
     this.manualGlyphs = new rxjs.BehaviorSubject<ReadonlyArray<UiGlyph>>(initGlyphs);
-    this.#manualGlyphsSig = toSignal(this.manualGlyphs, { requireSync: true });
+    this.manualGlyphsDisplay = toSignal(this.manualGlyphs, { requireSync: true });
   }
 
   #lastGlyphId = 0;

@@ -5,6 +5,7 @@
 }
 
 mat-card-content {
+    min-width: 160px;
     display: grid;
     grid: auto auto auto / auto-flow 1fr auto;
     gap: 8px 0px;
@@ -37,6 +38,11 @@ mat-card-content {
     &>ul {
         grid-row: 3;
     }
+}
+
+mat-card-actions {
+    gap: 4px;
+    @include mat.icon-button-overrides((state-layer-size: 32px, touch-target-display: none));
 }
 
 .error {

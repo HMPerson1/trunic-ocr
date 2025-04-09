@@ -20,6 +20,10 @@
         }
         }
     </mat-card-content>
+    <mat-card-actions align="end">
+        <button mat-icon-button (click)="editClick.emit()"><mat-icon>edit</mat-icon></button>
+        <button mat-icon-button (click)="deleteClick.emit()"><mat-icon>delete</mat-icon></button>
+    </mat-card-actions>
 </mat-card>
 
 <ng-template #wordlist let-wordlist="wordlist">
