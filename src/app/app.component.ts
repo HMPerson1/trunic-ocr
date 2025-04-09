@@ -71,12 +71,12 @@ export class AppComponent {
   }
 
   async startOcr(blob: Promise<Blob>) {
+    this.manualPanel()?.reset();
     (await this.#ocrManagerP).startOcr(blob, !this.autoMode());
   }
 
   async resetOcr() {
-    // janky hack but ehhhhhh
-    this.autoMode.set(true);
+    this.manualPanel()?.reset();
     (await this.#ocrManagerP).reset();
   }
 

@@ -139,6 +139,13 @@ export class OcrManualControlPanelComponent {
     this.manualGlyphs.next(glyphs);
   }
 
+  reset() {
+    this.geometryForm.reset();
+    this.previewXCtrl.reset();
+    this.previewYCtrl.reset();
+    this.manualGlyphs.next([]);
+  }
+
   readonly manualGlyphsTableTrackBy: TrackByFunction<{ readonly id: number; }> = (_i, { id }) => id;
 }
 
