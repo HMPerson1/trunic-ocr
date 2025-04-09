@@ -33,7 +33,7 @@ import { PRONUNCIATION_SYSTEMS } from './trunic-data';
 export class AppComponent {
   readonly dragActive = signal(false);
   readonly pronctnSystem = signal(PRONUNCIATION_SYSTEMS[0]);
-  readonly autoMode = signal(false);
+  readonly autoMode = signal(true);
   readonly autoOcrState = computed<OcrState | undefined>(() => this.#ocrManager()?.autoOcrState());
   readonly hydrationDone = signal(false);
 
