@@ -94,11 +94,16 @@ export class OcrManualControlPanelComponent {
     const inputImage = this.inputImage();
     if (inputImage === undefined) return;
     const geometry = this.manualGlyphGeometry();
+    const glyphOrigin = (() => {
+      const lastGlyph = this.manualGlyphs.value.at(-1);
+      if (lastGlyph === undefined) return [this.previewX(), this.previewY()] as const;
+      return [lastGlyph.origin[0] + Math.round(geometry.glyph_width), lastGlyph.origin[1]] as const;
+    })();
     const dialogInput: ManualGlyphDialogInput = {
       isNew: true,
       geometry,
       inputImage,
-      glyph: { origin: [this.previewX(), this.previewY()], strokes: 0 },
+      glyph: { origin: glyphOrigin, strokes: 0 },
     };
     const dialogRef = this.matDialog.open(ManualGlyphDialogComponent, { data: dialogInput });
     const res: Glyph | undefined = await rxjs.firstValueFrom(dialogRef.afterClosed());
