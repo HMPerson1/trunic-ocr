@@ -3,11 +3,13 @@
 import * as BrowserRunner from "@effect/platform-browser/BrowserWorkerRunner";
 import * as Runner from "@effect/platform/WorkerRunner";
 import { pipe } from "effect";
+import * as Cause from 'effect/Cause';
 import * as Channel from "effect/Channel";
 import * as Chunk from "effect/Chunk";
 import * as Context from "effect/Context";
 import * as E from 'effect/Effect';
 import * as Layer from "effect/Layer";
+import * as O from 'effect/Option';
 import * as Scope from "effect/Scope";
 import * as Stream from 'effect/Stream';
 import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.mjs";
@@ -47,7 +49,7 @@ const WorkerLive = Runner.layerSerialized(WorkerMessage, {
     const pynparr1: PyBuffer = yield* acqRelPyProxy(E.succeed(ocrCore.loadBitmap(py.toPy(bmpData.data), bmpData.width, bmpData.height)));
     return (yield* ProxyStore).add(pynparr1) as PyWorkImageRef;
   })),
-  oneshotRecognize: ({ imgRef }) => doOneshotRecognizeOnce(imgRef, false),
+  oneshotRecognize: ({ imgRef }) => doOneshotRecognize(imgRef),
   destroy: ({ ref }) => E.gen(function* () {
     const proxyStore = yield* ProxyStore;
     const pyobj: PyProxy = proxyStore.get(ref);
@@ -55,6 +57,21 @@ const WorkerLive = Runner.layerSerialized(WorkerMessage, {
     pyobj.destroy();
   }),
 });
+
+const doOneshotRecognize = (imgRef: PyWorkImageRef): Stream.Stream<OneshotRecognizeProgress, never, OcrCorePyodide | ProxyStore> =>
+  Stream.fromChannel(Channel.flatMap(OcrCorePyodide, ({ py }) => pipe(
+    doOneshotRecognizeOnce(imgRef, false),
+    Stream.catchSomeCause(cause => pipe(
+      Cause.dieOption(cause),
+      O.filter(e => e instanceof py.ffi.PythonError),
+      O.map(e => {
+        console.warn("python exception; retrying");
+        console.warn(e);
+        return doOneshotRecognizeOnce(imgRef, true);
+      }),
+    )),
+    Stream.toChannel,
+  )));
 
 const doOneshotRecognizeOnce = (imgRef: PyWorkImageRef, lax: boolean): Stream.Stream<OneshotRecognizeProgress, never, OcrCorePyodide | ProxyStore> =>
   Stream.fromChannel(pipe(
