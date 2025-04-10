@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { MatIconButton } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,7 +12,8 @@ import * as defaultGlyphGeometry from './default-glyph-geometry.json';
   selector: 'app-trunic-glyph-detail',
   imports: [MatCardModule, NgTemplateOutlet, TrunicGlyphImageComponent, MatIconModule, MatIconButton],
   templateUrl: './trunic-glyph-detail.component.html',
-  styleUrl: './trunic-glyph-detail.component.scss'
+  styleUrl: './trunic-glyph-detail.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TrunicGlyphDetailComponent {
   readonly strokesPacked = input.required<number>();
