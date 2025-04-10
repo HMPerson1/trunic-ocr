@@ -17,15 +17,16 @@
       Auto
     </mat-button-toggle>
     <mat-button-toggle [value]="false"
-      [disabled]="!(autoMode() === false || autoOcrState_ === undefined || autoOcrState_.done())">
+      [disabled]="!(autoMode() === false || autoOcrState_ === undefined || autoOcrState_.done?.())">
       Manual
     </mat-button-toggle>
   </mat-button-toggle-group>
   <button mat-icon-button appInfoDialogOpenButton matTooltip="About"><mat-icon>info</mat-icon></button>
   }
 </mat-toolbar>
-<mat-progress-bar [mode]="autoOcrState_ && autoOcrState_.ocrProgress() === undefined ? 'query' : 'determinate'"
-  [value]="autoOcrState_?.ocrProgress() ?? 0" />
+<mat-progress-bar
+  [mode]="manualPanel() && autoOcrState_ && autoOcrState_.ocrProgress && autoOcrState_.ocrProgress() === undefined ? 'query' : 'determinate'"
+  [value]="manualPanel() ? 0 : autoOcrState_?.ocrProgress?.() ?? 0" />
 <div class="content">
   <div class="img-container">
     <div class="img-drop-container" #dropZone (drop)="onImgDrop($event)"

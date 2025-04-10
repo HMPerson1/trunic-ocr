@@ -7,7 +7,7 @@ import * as Fiber from 'effect/Fiber';
 import * as Stream from 'effect/Stream';
 import { PyworkService } from './pywork.service';
 import { bitmapResource } from './utils';
-import type { Glyph, GlyphGeometry, GlyphGeometryPrim } from './worker-api';
+import type { Glyph, GlyphGeometry, GlyphGeometryPrim, PyWorkImageRef } from './worker-api';
 
 @Injectable({
   providedIn: 'root'
@@ -28,7 +28,6 @@ export class OcrManagerService {
         const fiber = E.runFork(pipe(
           E.gen(this, function* () {
             const [pyImage, setDisplayP] = yield* this.loadImage(state.imageRenderable, blob_);
-            state.ocrProgress.set(100);
             yield* Fiber.join(setDisplayP);
             yield* E.never;
           }),
@@ -39,7 +38,21 @@ export class OcrManagerService {
       } else {
         const state = new AutoOcrState();
         const fiber = E.runFork(pipe(
-          this.doAutoOcr(state, blob_),
+          E.gen(this, function* () {
+            const [pyImage, setDisplayP] = yield* this.loadImage(state.imageRenderable, blob_);
+
+            yield* E.catchAllCause(
+              this.doAutoOcr(pyImage, state),
+              e => {
+                // make sure errors get logged
+                Promise.reject(e);
+                return E.void;
+              });
+
+            yield* Fiber.join(setDisplayP);
+            state.done.set(true);
+            yield* E.never;
+          }),
           E.scoped,
           this.#workMutex.withPermits(1),
         ));
@@ -75,32 +88,6 @@ export class OcrManagerService {
     this.#autoOcrState.set(undefined);
   }
 
-  readonly doAutoOcr = (state: AutoOcrState, blob_: Promise<Blob>) => E.gen(this, function* () {
-    const [pyImage, setDisplayP] = yield* this.loadImage(state.imageRenderable, blob_);
-
-    let nextGlyphId = 0;
-    yield* Stream.runForEach(this.pywork.oneshotRecognize(pyImage), ([p, v]) => {
-      state.ocrProgress.set(p * 100);
-      if (v === undefined) return E.void;
-      switch (v._tag) {
-        case 'a':
-          state.recognizedGeometry.set(v.v[1]);
-          state.recognizedGeometryPrim = v.v[0];
-          break;
-        case 'b':
-          state.recognizedGlyphs.update(prev => [...prev, { id: nextGlyphId++, ...v.v }]);
-          break;
-        default:
-          const _a: never = v;
-      }
-      return E.void;
-    });
-
-    yield* Fiber.join(setDisplayP);
-    state.done.set(true);
-    yield* E.never;
-  });
-
   readonly loadImage = (imageRenderable: WritableSignal<ImageBitmap | undefined>, blob_: Promise<Blob>) => E.gen(this, function* () {
     const blob = yield* E.promise(() => blob_);
 
@@ -119,7 +106,7 @@ export class OcrManagerService {
         E.flatMap(pyDecode => this.pywork.decoded2bitmap(pyDecode)),
         E.mapErrorCause(e2 => Cause.parallel(Cause.fail(e1), e2)),
       )),
-      E.map(v => imageRenderable.set(v)),
+      E.flatMap(v => E.acquireRelease(E.succeed(imageRenderable.set(v)), () => E.succeed(imageRenderable.set(undefined)))),
     ));
 
     const pyImage = yield* E.catchAll(
@@ -133,6 +120,26 @@ export class OcrManagerService {
 
     return [pyImage, setDisplayP] as const;
   });
+
+  doAutoOcr(pyImage: PyWorkImageRef, state: AutoOcrState): E.Effect<void, never, never> {
+    let nextGlyphId = 0;
+    return Stream.runForEach(this.pywork.oneshotRecognize(pyImage), ([p, v]) => {
+      state.ocrProgress.set(p * 100);
+      if (v === undefined) return E.void;
+      switch (v._tag) {
+        case 'a':
+          state.recognizedGeometry.set(v.v[1]);
+          state.recognizedGeometryPrim = v.v[0];
+          break;
+        case 'b':
+          state.recognizedGlyphs.update(prev => [...prev, { id: nextGlyphId++, ...v.v }]);
+          break;
+        default:
+          const _a: never = v;
+      }
+      return E.void;
+    });
+  }
 }
 
 export type UiGlyph = Glyph & { readonly id: number };
@@ -144,11 +151,11 @@ type InternalOcrState = {
 
 class BaseOcrState {
   readonly imageRenderable = signal<ImageBitmap | undefined>(undefined);
-  readonly ocrProgress = signal<undefined | number>(undefined);
-  readonly done = signal(false);
 }
 
 class AutoOcrState extends BaseOcrState {
+  readonly ocrProgress = signal<undefined | number>(undefined);
+  readonly done = signal(false);
   readonly recognizedGeometry = signal<GlyphGeometry | undefined>(undefined);
   /* rw */ recognizedGeometryPrim: GlyphGeometryPrim | undefined = undefined;
   readonly recognizedGlyphs = signal<ReadonlyArray<UiGlyph>>([]);
