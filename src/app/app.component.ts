@@ -1,52 +1,66 @@
-import { Overlay, type OverlayRef } from '@angular/cdk/overlay';
-import { ComponentPortal } from '@angular/cdk/portal';
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDialog } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSelectModule } from '@angular/material/select';
-import { MatToolbarModule } from '@angular/material/toolbar';
+import { ChangeDetectionStrategy, Component, Injector, afterNextRender, computed, signal, viewChild } from '@angular/core';
+import { EventPhase } from '@angular/core/primitives/event-dispatch';
+import { MatButton, MatIconButton } from '@angular/material/button';
+import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
+import { MatFormField, MatLabel } from '@angular/material/form-field';
+import { MatIcon } from '@angular/material/icon';
+import { MatProgressBar } from '@angular/material/progress-bar';
+import { MatOption, MatSelect } from '@angular/material/select';
+import { MatToolbar } from '@angular/material/toolbar';
 import { MatTooltip } from '@angular/material/tooltip';
 import { fileOpen } from 'browser-fs-access';
 import { example_inputs } from './example-inputs.json';
-import { ImageExtToMimeTypePipe } from './image-ext-to-mime-type.pipe';
 import { ImageRendererCanvasComponent } from './image-renderer-canvas/image-renderer-canvas.component';
-import { InfoDialogComponent } from './info-dialog/info-dialog.component';
-import { PyworkService, type GlyphGeometry } from './pywork.service';
+import { InfoDialogOpenButtonDirective } from './info-dialog/info-dialog-open-button.directive';
+import { ImageExtToMimeTypePipe } from './misc/image-ext-to-mime-type.pipe';
+import type { OcrManagerService, OcrState } from './ocr-manager/ocr-manager.service';
+import { PyworkEarlyService } from './ocr-manager/pywork-early.service';
+import { OcrManualControlPanelComponent } from "./ocr-manual-control-panel/ocr-manual-control-panel.component";
+import { OcrOverlayComponent } from "./ocr-overlay/ocr-overlay.component";
 import { PRONUNCIATION_SYSTEMS } from './trunic-data';
-import { TrunicGlyphDetailComponent } from './trunic-glyph-detail/trunic-glyph-detail.component';
-import { TrunicGlyphComponent } from './trunic-glyph/trunic-glyph.component';
 
 @Component({
   selector: 'app-root',
-  imports: [ImageRendererCanvasComponent, TrunicGlyphComponent, MatToolbarModule, MatIconModule, MatButtonModule, MatProgressBarModule, MatFormFieldModule, MatSelectModule, MatTooltip, ImageExtToMimeTypePipe],
+  imports: [ImageRendererCanvasComponent, MatToolbar, MatIcon, MatButton, MatIconButton, MatProgressBar, MatFormField, MatLabel, MatSelect, MatOption, MatTooltip, ImageExtToMimeTypePipe, OcrOverlayComponent, InfoDialogOpenButtonDirective, MatButtonToggle, MatButtonToggleGroup, OcrManualControlPanelComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
   host: {
-    '(window:dragover)': 'windowDragOver($event)',
-    '(window:drop)': 'windowDrop($event)',
     '(window:paste)': 'onPaste($event)',
+    '[class.dehydrated]': "!hydrationDone()",
   },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent {
-  readonly hasInputImage = signal(false);
-  readonly imageRenderable = signal<ImageBitmap | undefined>(undefined);
-  readonly ocrProgress = signal<undefined | number>(undefined);
-  readonly recognizedGlyphs = signal<[GlyphGeometry, { strokes: number, origin: [number, number] }[]] | undefined>(undefined);
   readonly dragActive = signal(false);
-  cancelCurrentOcr?: () => Promise<void> = undefined;
-
-  readonly _PNS = PRONUNCIATION_SYSTEMS;
   readonly pronctnSystem = signal(PRONUNCIATION_SYSTEMS[0]);
+  readonly autoMode = signal(true);
+  readonly autoOcrState = computed<OcrState | undefined>(() => this.#ocrManager()?.autoOcrState());
+  readonly hydrationDone = signal(false);
+
+  readonly #ocrManager = signal<OcrManagerService | undefined>(undefined);
+  readonly #ocrManagerP: Promise<OcrManagerService>;
+
+  readonly manualPanel = viewChild<OcrManualControlPanelComponent>('manualPanel');
 
   constructor(
-    private readonly pywork: PyworkService,
-    private readonly cdkOverlay: Overlay,
-    private readonly matDialog: MatDialog,
-  ) { }
+    injector: Injector,
+    // worker service is injected statically so it starts initializing immediately
+    _pywork: PyworkEarlyService,
+  ) {
+    this.#ocrManagerP = (typeof Worker !== 'undefined') ? (async () => {
+      const m = await import('./ocr-manager/ocr-manager.service');
+      const svc = injector.get(m.OcrManagerService);
+      this.#ocrManager.set(svc);
+      return svc;
+    })() : new Promise(() => { });
+
+    afterNextRender({
+      earlyRead: () => {
+        this.hydrationDone.set(true)
+        performance.mark('app component hydration done')
+      },
+    })
+  }
 
   async handleData(data: DataTransfer) {
     const blob = await getImageDataBlobFromDataTransfer(data);
@@ -56,100 +70,18 @@ export class AppComponent {
     this.startOcr(blob[0]);
   }
 
-  async startOcr(blob_: Promise<Blob>) {
-    this.hasInputImage.set(true);
-    this.imageRenderable.set(undefined);
-    this.ocrProgress.set(undefined);
-    this.recognizedGlyphs.set(undefined);
-    this.currentOverlay?.[1].dispose();
+  async startOcr(blob: Promise<Blob>) {
+    this.manualPanel()?.reset();
+    (await this.#ocrManagerP).startOcr(blob, !this.autoMode());
+  }
 
-    let resolveCancel: ((v: undefined) => void) | undefined;
-    const lastCancelCurrentOcr = this.cancelCurrentOcr;
-    this.cancelCurrentOcr = () => new Promise(resolve => resolveCancel = resolve);
-
-    if (lastCancelCurrentOcr) {
-      await lastCancelCurrentOcr();
-      if (resolveCancel) {
-        resolveCancel(undefined);
-        return;
-      }
-      this.ocrProgress.set(undefined);
-      this.recognizedGlyphs.set(undefined);
-    }
-
-    const blob = await blob_;
-
-    // race python-opencv decode and browser decode
-    const browserDecodeP = createImageBitmap(blob);
-    const pyDecodeP = this.pywork.decodeImage(blob);
-    const bitmapDisplay = await (async () => {
-      try {
-        return await browserDecodeP;
-      } catch (e) {
-        console.warn("browser could not decode image", e);
-      }
-      const pyDecodeResult = await pyDecodeP;
-      if (pyDecodeResult != null) {
-        return await this.pywork.decoded2bitmap(pyDecodeResult);
-      }
-      throw new Error("could not decode image");
-    })();
-    this.imageRenderable.set(bitmapDisplay);
-
-    // if we get here, at least one decode succeeded
-    const pyImage = await pyDecodeP ?? await this.pywork.loadBitmap(await browserDecodeP);
-    try {
-      if (resolveCancel) {
-        resolveCancel(undefined);
-        return;
-      }
-
-      const [ocrProgress, cancel] = this.pywork.oneshotRecognize(pyImage);
-      const ocrDone = Promise.withResolvers<void>();
-      const ocrProgressSub = ocrProgress.subscribe({
-        next: ([p, v]) => {
-          this.ocrProgress.set(p * 100);
-          if (v === undefined) return;
-          switch (v.t) {
-            case 0:
-              this.recognizedGlyphs.set([v.v, []]);
-              break;
-            case 1:
-              this.recognizedGlyphs.update(prev => prev == null ? prev : [prev[0], [...prev[1], {
-                origin: v.v.origin,
-                strokes: (v.v.strokes[1] << 8) | v.v.strokes[0]
-              }]]);
-              break;
-            default:
-              const _a: never = v;
-          }
-        },
-        error: ocrDone.reject,
-        complete: ocrDone.resolve,
-      });
-
-      let wasCancelled = false;
-      const thisCancelCurrentOcr = async () => {
-        wasCancelled = true;
-        await cancel();
-        try { await ocrDone.promise; } catch { }
-      };
-      this.cancelCurrentOcr = thisCancelCurrentOcr;
-
-      try {
-        await ocrDone.promise;
-      } catch (e) {
-        if (!wasCancelled) throw e;
-      } finally {
-        if (this.cancelCurrentOcr === thisCancelCurrentOcr) this.cancelCurrentOcr = undefined;
-        ocrProgressSub.unsubscribe();
-      }
-    } finally {
-      await this.pywork.destroy(pyImage);
-    }
+  async resetOcr() {
+    this.manualPanel()?.reset();
+    (await this.#ocrManagerP).reset();
   }
 
   onImgDrop(event: DragEvent) {
+    if (event.eventPhase === EventPhase.REPLAY) return;
     this.dragActive.set(false);
     const dt = event.dataTransfer;
     if (dt == null) return;
@@ -159,6 +91,7 @@ export class AppComponent {
     this.handleData(dt);
   }
   onImgOver(event: DragEvent) {
+    if (event.eventPhase === EventPhase.REPLAY) return;
     const dt = event.dataTransfer;
     if (dt == null) return;
     event.stopPropagation();
@@ -167,6 +100,7 @@ export class AppComponent {
   }
 
   onPaste(event: ClipboardEvent) {
+    if (event.eventPhase === EventPhase.REPLAY) return;
     const dt = event.clipboardData
     if (dt == null) return;
     event.preventDefault();
@@ -184,51 +118,19 @@ export class AppComponent {
     }
   }
 
-  async useExample(example_entry: { path: string }) {
-    const resp = await fetch(`example-images/${example_entry.path}.png`);
-    if (!resp.ok) {
-      throw Error("error response fetching example", { cause: resp });
-    }
-    this.startOcr(resp.blob());
+  useExample(example_entry: { path: string }) {
+    this.startOcr((async () => {
+      const resp = await fetch(`example-images/${example_entry.path}.png`);
+      if (!resp.ok) {
+        throw Error("error response fetching example", { cause: resp });
+      }
+      return resp.blob();
+    })());
   }
 
-  windowDragOver(event: DragEvent) {
-    event.dataTransfer!.dropEffect = 'none'
-    event.preventDefault();
-  }
-  windowDrop(event: DragEvent) {
-    event.preventDefault();
-  }
-
-  currentOverlay: [EventTarget, OverlayRef] | undefined = undefined;
-
-  onGlyphToggle(event: Event, glyphIndex: number) {
-    const glyphs = this.recognizedGlyphs();
-    if (glyphs !== undefined && event.target != null && (event as ToggleEvent).newState === 'open') {
-      this.currentOverlay?.[1].dispose();
-      const overlayRef = this.cdkOverlay.create({
-        positionStrategy: this.cdkOverlay.position()
-          .flexibleConnectedTo(event.target as Element)
-          .withPositions([
-            { originX: 'center', originY: 'bottom', overlayX: 'center', overlayY: 'top' },
-            { originX: 'center', originY: 'top', overlayX: 'center', overlayY: 'bottom' },
-          ])
-          .withFlexibleDimensions(false),
-      });
-      const compRef = overlayRef.attach(new ComponentPortal(TrunicGlyphDetailComponent));
-      compRef.setInput('strokesPacked', glyphs[1][glyphIndex].strokes);
-      compRef.setInput('pronctnSystem', this.pronctnSystem());
-      this.currentOverlay = [event.target, overlayRef];
-    } else if (this.currentOverlay && event.target === this.currentOverlay[0]) {
-      this.currentOverlay[1].dispose();
-    }
-  }
-
-  openInfoDialog() {
-    this.matDialog.open(InfoDialogComponent, { autoFocus: 'dialog' });
-  }
-
-  _EXAMPLE_INPUTS = example_inputs;
+  readonly _PNS = PRONUNCIATION_SYSTEMS;
+  readonly _EXAMPLE_INPUTS = example_inputs;
+  readonly _EventPhase_REPLAY = EventPhase.REPLAY;
 }
 
 async function getImageDataBlobFromDataTransfer(data: DataTransfer): Promise<[Promise<Blob>] | undefined> {

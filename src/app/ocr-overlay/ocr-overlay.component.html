@@ -1,0 +1,10 @@
+@if (geometry(); as geometry_) {
+@for (glyph of glyphs(); track glyph.id) {
+<details name="glyph" [style.top.px]="glyph.origin[1]" [style.left.px]="glyph.origin[0]" appOcrOverlayDetailsOpener
+  [glyph]="glyph" [pronctnSystem]="pronctnSystem()" (editClick)="editGlyph($event)" (deleteClick)="deleteGlyph($event)">
+  <summary>
+    <app-trunic-glyph [geometry]="geometry_" [pronctnSystem]="pronctnSystem()" [strokesPacked]="glyph.strokes" />
+  </summary>
+</details>
+}
+}

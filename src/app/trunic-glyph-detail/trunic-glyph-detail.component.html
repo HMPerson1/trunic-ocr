@@ -1,51 +1,55 @@
 <mat-card>
-    <mat-card-content>
-        @for (data of _data(); track $index) {
-        @if ($index > 0) {
-        <mat-icon class="glyph-plus">add</mat-icon>
-        }
-        <app-trunic-glyph-image class="glyph-image" [geometry]="_DEFAULT_GLYPH_GEOMETRY" [strokesPacked]="data[0]" />
-        @if (data[1] === '???') {
-        <h3 class="font-noto error">???</h3>
-        } @else {
-        <h3 class="font-noto">
-            @for(sym of data[1]; track $index) {
-            @if ($index > 0) {
-            <span>,&ngsp;</span>
-            }
-            <span>{{ pronctnSystem().delimiter }}{{ sym }}{{ pronctnSystem().delimiter }}</span>
-            }
-        </h3>
-        <ng-container *ngTemplateOutlet="wordlist; context: {wordlist: data[2]}" />
-        }
-        }
-    </mat-card-content>
+  <mat-card-content>
+    @for (data of _data(); track $index) {
+    @if ($index > 0) {
+    <mat-icon class="glyph-plus">add</mat-icon>
+    }
+    <app-trunic-glyph-image class="glyph-image" [geometry]="_DEFAULT_GLYPH_GEOMETRY" [strokesPacked]="data[0]" />
+    @if (data[1] === '???') {
+    <h3 class="font-noto error">???</h3>
+    } @else {
+    <h3 class="font-noto">
+      @for(sym of data[1]; track $index) {
+      @if ($index > 0) {
+      <span>,&ngsp;</span>
+      }
+      <span>{{ pronctnSystem().delimiter }}{{ sym }}{{ pronctnSystem().delimiter }}</span>
+      }
+    </h3>
+    <ng-container *ngTemplateOutlet="wordlist; context: {wordlist: data[2]}" />
+    }
+    }
+  </mat-card-content>
+  <mat-card-actions align="end">
+    <button mat-icon-button (click)="editClick.emit()"><mat-icon>edit</mat-icon></button>
+    <button mat-icon-button (click)="deleteClick.emit()"><mat-icon>delete</mat-icon></button>
+  </mat-card-actions>
 </mat-card>
 
 <ng-template #wordlist let-wordlist="wordlist">
-    <ul>
-        @for (words of wordlist; track $index) {
-        <li>
-            <ng-container *ngTemplateOutlet="mword; context: {word: words[0]}" />
-            @if (words.length > 1) {
-            &ngsp;
-            <em>
-                <span>(not&ngsp;</span>
-                <ng-container *ngTemplateOutlet="mword; context: {word: words[1]}" />
-                <span>)</span>
-            </em>
-            }
-        </li>
-        }
-    </ul>
+  <ul>
+    @for (words of wordlist; track $index) {
+    <li>
+      <ng-container *ngTemplateOutlet="mword; context: {word: words[0]}" />
+      @if (words.length > 1) {
+      &ngsp;
+      <em>
+        <span>(not&ngsp;</span>
+        <ng-container *ngTemplateOutlet="mword; context: {word: words[1]}" />
+        <span>)</span>
+      </em>
+      }
+    </li>
+    }
+  </ul>
 </ng-template>
 
 <ng-template #mword let-word="word">
-    @for (chars of word; track $index) {
-    @if ($index % 2 === 0) {
-    <span>{{ chars }}</span>
-    } @else {
-    <mark>{{ chars }}</mark>
-    }
-    }
+  @for (chars of word; track $index) {
+  @if ($index % 2 === 0) {
+  <span>{{ chars }}</span>
+  } @else {
+  <mark>{{ chars }}</mark>
+  }
+  }
 </ng-template>

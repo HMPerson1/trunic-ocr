@@ -1,0 +1,60 @@
+@use '@angular/material' as mat;
+
+:host {
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+
+  @include mat.form-field-overrides((container-height: 44px, container-vertical-padding: 10px));
+}
+
+h2 {
+  margin: 16px 0 16px 0;
+  font: var(--mat-sys-title-large);
+  letter-spacing: var(--mat-sys-title-large-tracking);
+}
+
+h2:first-child {
+  margin-top: 0;
+}
+
+section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-line {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+}
+
+app-trunic-geometry-preview {
+  align-self: center;
+  width: 300px;
+  height: 400px;
+}
+
+.geom-fields {
+  display: grid;
+  grid-template: auto 1fr / 1fr 1fr;
+  gap: 16px;
+}
+
+table {
+  font-variant-numeric: tabular-nums;
+
+  @include mat.table-overrides((header-container-height: 48px, footer-container-height: 44px, row-item-container-height: 44px));
+  @include mat.icon-button-overrides((state-layer-size: 32px, touch-target-display: none));
+
+  & .mat-column-x,
+  & .mat-column-y,
+  & .mat-column-e {
+    text-align: right;
+  }
+
+  & button[mat-icon-button]:first-child {
+    margin-right: 4px;
+  }
+}

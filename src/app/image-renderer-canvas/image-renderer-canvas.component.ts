@@ -1,4 +1,5 @@
 import { DestroyRef, Directive, ElementRef, computed, effect, input, signal } from '@angular/core';
+import { objectFitMax } from '../misc/object-fit-max';
 
 @Directive({
   selector: 'canvas[app-image-renderer-canvas]',
@@ -8,16 +9,7 @@ export class ImageRendererCanvasComponent {
   readonly data = input.required<ImageBitmap>();
   readonly devPxSize = signal<ResizeObserverSize>({ blockSize: 0, inlineSize: 0 });
   readonly cssPxSize = signal<ResizeObserverSize>({ blockSize: 0, inlineSize: 0 });
-  readonly imgTransform = computed(() => {
-    const data = this.data();
-    const { blockSize: height, inlineSize: width } = this.cssPxSize();
-    const widthScale = width / data.width;
-    const heightScale = height / data.height;
-    const scale = Math.min(widthScale, heightScale);
-    const drawnWidth = data.width * scale;
-    const drawnHeight = data.height * scale;
-    return new DOMMatrixReadOnly([scale, 0, 0, scale, (width - drawnWidth) / 2, (height - drawnHeight) / 2]);
-  });
+  readonly imgTransform = computed(() => objectFitMax(this.data(), this.cssPxSize()));
 
   constructor(hostElem: ElementRef<HTMLCanvasElement>, destroyRef: DestroyRef) {
     const canvas = hostElem.nativeElement;
@@ -30,17 +22,14 @@ export class ImageRendererCanvasComponent {
 
     effect(() => {
       const data = this.data();
-      const { blockSize: height, inlineSize: width } = this.devPxSize();
-      const widthScale = width / data.width;
-      const heightScale = height / data.height;
-      const scale = Math.min(widthScale, heightScale);
-      const drawnWidth = data.width * scale;
-      const drawnHeight = data.height * scale;
+      const devPxSize = this.devPxSize();
+      const { blockSize: height, inlineSize: width } = devPxSize;
+      const fitMat = objectFitMax(data, devPxSize);
 
       canvas.width = width;
       canvas.height = height;
       const canvasCtx = canvas.getContext('2d')!;
-      canvasCtx.drawImage(data, (width - drawnWidth) / 2, (height - drawnHeight) / 2, drawnWidth, drawnHeight);
+      canvasCtx.drawImage(data, fitMat.e, fitMat.f, fitMat.a * data.width, fitMat.d * data.height);
     });
   }
 }

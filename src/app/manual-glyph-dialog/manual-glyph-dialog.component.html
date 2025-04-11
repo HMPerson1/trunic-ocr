@@ -1,0 +1,44 @@
+<h2 mat-dialog-title>
+  @if (data.isNew) {
+  Add Glyph
+  } @else {
+  Edit Glyph
+  }
+</h2>
+<form mat-dialog-content [formGroup]="glyphForm" id="dialog-glyph-form">
+  <app-trunic-geometry-preview [inputImage]="data.inputImage" [geometry]="data.geometry" [glyphX]="glyphX()"
+    [glyphY]="glyphY()" [strokesPacked]="glyphStrokes()" />
+  <div class="form-line">
+    <mat-form-field>
+      <input type="number" matInput formControlName="x" />
+      <mat-label>Glyph X</mat-label><span matTextSuffix>px</span>
+    </mat-form-field>
+    <mat-form-field>
+      <input type="number" matInput formControlName="y" />
+      <mat-label>Glyph Y</mat-label><span matTextSuffix>px</span>
+    </mat-form-field>
+  </div>
+  <div class="form-line">
+    <div class="strokes-grid">
+      <span>Consonant Strokes:</span>
+      <mat-checkbox formControlName="sc1" />
+      <mat-checkbox formControlName="sc2" />
+      <mat-checkbox formControlName="sc3" />
+      <mat-checkbox formControlName="sc4" />
+      <mat-checkbox formControlName="sc5" />
+      <mat-checkbox formControlName="sc6" />
+      <span>Vowel Strokes:</span>
+      <mat-checkbox formControlName="sv1" />
+      <mat-checkbox formControlName="sv2" />
+      <mat-checkbox formControlName="sv3" />
+      <mat-checkbox formControlName="sv4" />
+      <mat-checkbox formControlName="sv5" />
+    </div>
+    <mat-checkbox formControlName="sf" labelPosition="before">Flip:</mat-checkbox>
+  </div>
+</form>
+<mat-dialog-actions>
+  <button mat-button [mat-dialog-close]="undefined">Cancel</button>
+  <button mat-button [mat-dialog-close]="glyphResult()" type="submit" form="dialog-glyph-form"
+    cdkFocusInitial>Done</button>
+</mat-dialog-actions>

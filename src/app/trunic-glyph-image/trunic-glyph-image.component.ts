@@ -1,11 +1,12 @@
-import { Component, computed, input } from '@angular/core';
-import type { GlyphGeometry } from '../pywork.service';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import type { GlyphGeometry } from '../ocr-manager/worker-api';
 
 @Component({
   selector: 'app-trunic-glyph-image',
   imports: [],
   templateUrl: './trunic-glyph-image.component.html',
-  styleUrl: './trunic-glyph-image.component.scss'
+  styleUrl: './trunic-glyph-image.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TrunicGlyphImageComponent {
   readonly geometry = input.required<GlyphGeometry>();
