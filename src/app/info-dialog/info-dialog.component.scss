@@ -1,38 +1,38 @@
 .gh-link {
-    margin-left: 12px;
-    translate: 0 3.5px;
+  margin-left: 12px;
+  translate: 0 3.5px;
 }
 
 p {
-    margin-block: 1.5em;
+  margin-block: 1.5em;
 
-    &:has(+details),
-    &:has(+ul) {
-        margin-bottom: 0;
-    }
+  &:has(+details),
+  &:has(+ul) {
+    margin-bottom: 0;
+  }
 }
 
 ul {
-    margin: 0;
+  margin: 0;
 }
 
 .dep-logo-line {
-    padding: 8px;
-    display: grid;
-    grid: 1fr / 1fr 1fr 1fr;
-    justify-items: center;
-    align-items: center;
-    justify-content: center;
+  padding: 8px;
+  display: grid;
+  grid: 1fr / 1fr 1fr 1fr;
+  justify-items: center;
+  align-items: center;
+  justify-content: center;
 }
 
 img.dep-logo {
-    display: block;
-    width: 80px;
-    height: 80px;
-    object-fit: contain;
+  display: block;
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
 }
 
 table img {
-    display: block;
-    padding-block: 8px;
+  display: block;
+  padding-block: 8px;
 }

@@ -1,29 +1,29 @@
 {
-    "example_inputs": [
-        {
-            "path": "manual-1",
-            "smallest": [".avif", ".jxl", ".webp", ".jpg"],
-            "page": "3"
-        },
-        {
-            "path": "manual-2",
-            "smallest": [".avif", ".jxl", ".webp", ".jpg"],
-            "page": "15"
-        },
-        {
-            "path": "game-1",
-            "smallest": [".webp", ".avif", ".jxl", ".jpg"],
-            "source": "https://i.imgur.com/Gz9sdAV.png"
-        },
-        {
-            "path": "game-2",
-            "smallest": [".webp", ".avif", ".jxl", ".jpg"],
-            "source": "https://i.imgur.com/ceVKDBm.png"
-        },
-        {
-            "path": "game-3",
-            "smallest": [".webp", ".avif", ".jxl", ".jpg"],
-            "source": "https://i.imgur.com/KoA74Eq.png"
-        }
-    ]
+  "example_inputs": [
+    {
+      "path": "manual-1",
+      "smallest": [".avif", ".jxl", ".webp", ".jpg"],
+      "page": "3"
+    },
+    {
+      "path": "manual-2",
+      "smallest": [".avif", ".jxl", ".webp", ".jpg"],
+      "page": "15"
+    },
+    {
+      "path": "game-1",
+      "smallest": [".webp", ".avif", ".jxl", ".jpg"],
+      "source": "https://i.imgur.com/Gz9sdAV.png"
+    },
+    {
+      "path": "game-2",
+      "smallest": [".webp", ".avif", ".jxl", ".jpg"],
+      "source": "https://i.imgur.com/ceVKDBm.png"
+    },
+    {
+      "path": "game-3",
+      "smallest": [".webp", ".avif", ".jxl", ".jpg"],
+      "source": "https://i.imgur.com/KoA74Eq.png"
+    }
+  ]
 }

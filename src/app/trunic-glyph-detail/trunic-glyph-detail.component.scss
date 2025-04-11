@@ -1,62 +1,62 @@
 @use '@angular/material' as mat;
 
 :host {
-    text-wrap: nowrap;
+  text-wrap: nowrap;
 }
 
 mat-card-content {
-    min-width: 160px;
-    display: grid;
-    grid: auto auto auto / auto-flow 1fr auto;
-    gap: 8px 0px;
+  min-width: 160px;
+  display: grid;
+  grid: auto auto auto / auto-flow 1fr auto;
+  gap: 8px 0px;
 
-    * {
-        margin: 0;
-    }
+  * {
+    margin: 0;
+  }
 
-    &>.glyph-image {
-        grid-row: 1;
-        place-self: center;
-        padding-inline: 8px;
-    }
+  &>.glyph-image {
+    grid-row: 1;
+    place-self: center;
+    padding-inline: 8px;
+  }
 
-    &>.glyph-plus {
-        grid-row: 1;
-        translate: 0 calc(49px - 50%);
-        /* 49 == glyph_template_origin[1] */
-        font-weight: 700;
-    }
+  &>.glyph-plus {
+    grid-row: 1;
+    translate: 0 calc(49px - 50%);
+    /* 49 == glyph_template_origin[1] */
+    font-weight: 700;
+  }
 
-    &>h3 {
-        grid-row: 2;
-        text-align: center;
+  &>h3 {
+    grid-row: 2;
+    text-align: center;
 
-        font: var(--mat-sys-display-small);
-        letter-spacing: var(--mat-sys-display-small-tracking);
-    }
+    font: var(--mat-sys-display-small);
+    letter-spacing: var(--mat-sys-display-small-tracking);
+  }
 
-    &>ul {
-        grid-row: 3;
-    }
+  &>ul {
+    grid-row: 3;
+  }
 }
 
 mat-card-actions {
-    gap: 4px;
-    @include mat.icon-button-overrides((state-layer-size: 32px, touch-target-display: none));
+  gap: 4px;
+  @include mat.icon-button-overrides((state-layer-size: 32px, touch-target-display: none));
 }
 
 .error {
-    color: #f00;
+  color: #f00;
 }
 
 ul {
-    padding-inline: 1.5em;
-    font: var(--mat-sys-body-large);
-    letter-spacing: var(--mat-sys-body-large-tracking);
+  padding-inline: 1.5em;
+  font: var(--mat-sys-body-large);
+  letter-spacing: var(--mat-sys-body-large-tracking);
 }
 
 mark {
-    background-color: inherit;
-    color: #fc0;
-    font-weight: 700;
+  background-color: inherit;
+  color: #fc0;
+  font-weight: 700;
 }

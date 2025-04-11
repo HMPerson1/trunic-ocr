@@ -1,41 +1,41 @@
 @use '@angular/material' as mat;
 
 :host {
-    display: block;
+  display: block;
 }
 
 app-trunic-glyph-image {
-    color: #0f0;
+  color: #0f0;
 }
 
 .ptext-align {
-    position: absolute;
-    inset: auto 0;
-    height: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  position: absolute;
+  inset: auto 0;
+  height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ptext {
-    z-index: 1;
-    color: #fff;
-    text-anchor: middle;
-    dominant-baseline: middle;
-    padding: .25em;
-    background: #0009;
-    font-family: var(--mat-sys-body-large-font);
-    font-weight: var(--mat-sys-body-large-weight);
+  z-index: 1;
+  color: #fff;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  padding: .25em;
+  background: #0009;
+  font-family: var(--mat-sys-body-large-font);
+  font-weight: var(--mat-sys-body-large-weight);
 }
 
 .ptext-error {
-    color: #f00;
+  color: #f00;
 }
 
 :host:hover {
-    background: #000b;
+  background: #000b;
 
-    & .ptext {
-        background: #000b;
-    }
+  & .ptext {
+    background: #000b;
+  }
 }

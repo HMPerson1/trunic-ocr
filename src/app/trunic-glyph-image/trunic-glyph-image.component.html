@@ -1,14 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" [attr.width]="_g().glyph_template_shape[1]"
-    [attr.height]="_g().glyph_template_shape[0]">
-    <g [style.stroke-width.px]="_g().stroke_width">
-        @for (stroke of _renderData(); track $index) {
-        @if (stroke.length === 0) {
-        <circle [attr.cx]="_g().circle_center[0]" [attr.cy]="_g().circle_center[1]" [attr.r]="_g().stroke_width" />
-        } @else {
-        @for (line of stroke; track $index) {
-        <polyline [attr.points]="line" />
-        }
-        }
-        }
-    </g>
+  [attr.height]="_g().glyph_template_shape[0]">
+  <g [style.stroke-width.px]="_g().stroke_width">
+    @for (stroke of _renderData(); track $index) {
+    @if (stroke.length === 0) {
+    <circle [attr.cx]="_g().circle_center[0]" [attr.cy]="_g().circle_center[1]" [attr.r]="_g().stroke_width" />
+    } @else {
+    @for (line of stroke; track $index) {
+    <polyline [attr.points]="line" />
+    }
+    }
+    }
+  </g>
 </svg>
