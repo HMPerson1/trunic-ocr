@@ -5,7 +5,7 @@
   Edit Glyph
   }
 </h2>
-<mat-dialog-content [formGroup]="glyphForm">
+<form mat-dialog-content [formGroup]="glyphForm" id="dialog-glyph-form">
   <app-trunic-geometry-preview [inputImage]="data.inputImage" [geometry]="data.geometry" [glyphX]="glyphX()"
     [glyphY]="glyphY()" [strokesPacked]="glyphStrokes()" />
   <div class="form-line">
@@ -36,8 +36,9 @@
     </div>
     <mat-checkbox formControlName="sf" labelPosition="before">Flip:</mat-checkbox>
   </div>
-</mat-dialog-content>
+</form>
 <mat-dialog-actions>
   <button mat-button [mat-dialog-close]="undefined">Cancel</button>
-  <button mat-button [mat-dialog-close]="glyphResult()" type="submit" cdkFocusInitial>Done</button>
+  <button mat-button [mat-dialog-close]="glyphResult()" type="submit" form="dialog-glyph-form"
+    cdkFocusInitial>Done</button>
 </mat-dialog-actions>

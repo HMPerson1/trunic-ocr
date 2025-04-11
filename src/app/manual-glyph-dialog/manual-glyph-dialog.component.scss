@@ -4,7 +4,7 @@
   @include mat.form-field-overrides((container-height: 44px, container-vertical-padding: 10px));
 }
 
-mat-dialog-content {
+[mat-dialog-content] {
   display: flex;
   flex-direction: column;
   gap: 16px;
