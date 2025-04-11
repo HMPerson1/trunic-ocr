@@ -1,0 +1,4 @@
+<canvas app-cropped-image-renderer-canvas [inputImage]="inputImage()" [windowSize]="glyphSizeSrcPx()"
+  [windowPos]="previewWindowSrcPx()" #previewDisplay="app-cropped-image-renderer-canvas"></canvas>
+<app-trunic-glyph-image [geometry]="geometry()" [strokesPacked]="strokesPacked()"
+  [style.transform]="previewDisplay.imgTransform().scale(1/geometry().upscale)" />

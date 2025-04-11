@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, DestroyRef, signal, type Signal, type TrackByFunction } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, DestroyRef, signal, type TrackByFunction } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButton, MatIconButton } from '@angular/material/button';
@@ -8,16 +8,15 @@ import { MatIcon } from '@angular/material/icon';
 import { MatInput } from '@angular/material/input';
 import { MatTableModule } from '@angular/material/table';
 import * as rxjs from 'rxjs';
-import { CroppedImageRendererCanvasComponent } from '../cropped-image-renderer-canvas/cropped-image-renderer-canvas.component';
 import { ManualGlyphDialogComponent, type ManualGlyphDialogInput } from '../manual-glyph-dialog/manual-glyph-dialog.component';
 import { makeFullGlyphGeometry, OcrManagerService, type UiGlyph } from '../ocr-manager/ocr-manager.service';
 import type { Glyph } from '../ocr-manager/worker-api';
-import { TrunicGlyphImageComponent } from "../trunic-glyph-image/trunic-glyph-image.component";
+import { TrunicGeometryPreviewComponent } from "../trunic-geometry-preview/trunic-geometry-preview.component";
 import { DisplayStrokesPipe } from './display-strokes.pipe';
 
 @Component({
   selector: 'app-ocr-manual-control-panel',
-  imports: [ReactiveFormsModule, MatFormFieldModule, MatInput, TrunicGlyphImageComponent, CroppedImageRendererCanvasComponent, MatTableModule, DisplayStrokesPipe, MatIconButton, MatButton, MatIcon],
+  imports: [ReactiveFormsModule, MatFormFieldModule, MatInput, MatTableModule, DisplayStrokesPipe, MatIconButton, MatButton, MatIcon, TrunicGeometryPreviewComponent],
   providers: [{ provide: MAT_FORM_FIELD_DEFAULT_OPTIONS, useValue: { appearance: 'outline', subscriptSizing: 'dynamic' } }],
   templateUrl: './ocr-manual-control-panel.component.html',
   styleUrl: './ocr-manual-control-panel.component.scss',
@@ -39,16 +38,6 @@ export class OcrManualControlPanelComponent {
   readonly previewYCtrl = fb.control(0);
   readonly previewX = toSignal(this.previewXCtrl.valueChanges, { initialValue: 0 });
   readonly previewY = toSignal(this.previewYCtrl.valueChanges, { initialValue: 0 });
-  readonly previewWindowSrcPx = computed(() => {
-    const geom = this.manualGlyphGeometry();
-    const [offX, offY] = geom.glyph_template_origin;
-    return [(this.previewX() - offX) / geom.upscale, (this.previewY() - offY) / geom.upscale] as const;
-  });
-  readonly glyphSizeSrcPx = computed(() => {
-    const geom = this.manualGlyphGeometry();
-    const [height, width] = geom.glyph_template_shape;
-    return { width: width / geom.upscale, height: height / geom.upscale };
-  });
 
   readonly inputImage;
 

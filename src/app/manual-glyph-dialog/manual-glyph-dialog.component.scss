@@ -11,35 +11,10 @@ mat-dialog-content {
   align-items: stretch;
 }
 
-.geom-preview {
+app-trunic-geometry-preview {
   align-self: center;
-  width: 500px;
-  height: 500px;
-  contain: strict;
-
-  // https://stackoverflow.com/a/72287995
-  --color-1: #808080;
-  --color-2: #a9a9a9;
-  --size: 8px;
-
-  background-image: conic-gradient(var(--color-1) 25%, var(--color-2) 25%, var(--color-2) 50%, var(--color-1) 50%, var(--color-1) 75%, var(--color-2) 75%);
-  background-size: calc(var(--size)*2) calc(var(--size)*2);
-
-  &>canvas {
-    position: absolute;
-    display: block;
-    height: 100%;
-    width: 100%;
-    z-index: -1;
-  }
-
-  &>app-trunic-glyph-image {
-    position: absolute;
-    display: block;
-    color: #0F0;
-    transform-origin: 0 0;
-    opacity: .7;
-  }
+  width: 400px;
+  height: 400px;
 }
 
 .form-line {
@@ -47,6 +22,10 @@ mat-dialog-content {
   flex-direction: row;
   gap: 16px;
   align-items: center;
+
+  &>* {
+    flex: 1;
+  }
 }
 
 .strokes-grid {
@@ -57,6 +36,7 @@ mat-dialog-content {
   grid-template: auto auto / 1fr repeat(6, auto);
 
   &>span {
+    text-wrap: nowrap;
     font: var(--mat-sys-body-medium);
     letter-spacing: var(--mat-sys-body-medium-tracking);
   }

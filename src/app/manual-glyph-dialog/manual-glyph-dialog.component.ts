@@ -1,18 +1,18 @@
-import { ChangeDetectionStrategy, Component, computed, Inject, signal, DestroyRef } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, Inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatButton } from '@angular/material/button';
 import { MatCheckbox } from '@angular/material/checkbox';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MAT_FORM_FIELD_DEFAULT_OPTIONS, MatFormFieldModule } from '@angular/material/form-field';
 import { MatInput } from '@angular/material/input';
-import { CroppedImageRendererCanvasComponent } from '../cropped-image-renderer-canvas/cropped-image-renderer-canvas.component';
 import type { Glyph, GlyphGeometry } from '../ocr-manager/worker-api';
-import { TrunicGlyphImageComponent } from '../trunic-glyph-image/trunic-glyph-image.component';
+import { TrunicGeometryPreviewComponent } from "../trunic-geometry-preview/trunic-geometry-preview.component";
+
 
 @Component({
   selector: 'app-manual-glyph-dialog',
-  imports: [MatDialogModule, ReactiveFormsModule, MatFormFieldModule, MatInput, MatCheckbox, MatButton, CroppedImageRendererCanvasComponent, TrunicGlyphImageComponent],
+  imports: [MatDialogModule, ReactiveFormsModule, MatFormFieldModule, MatInput, MatCheckbox, MatButton, TrunicGeometryPreviewComponent],
   providers: [{ provide: MAT_FORM_FIELD_DEFAULT_OPTIONS, useValue: { appearance: 'outline', subscriptSizing: 'dynamic' } }],
   templateUrl: './manual-glyph-dialog.component.html',
   styleUrl: './manual-glyph-dialog.component.scss',
@@ -38,13 +38,8 @@ export class ManualGlyphDialogComponent {
 
   readonly #glyphFormValue;
 
-  readonly #glyphX = toSignal(this.glyphForm.get('x')!.valueChanges, { initialValue: this.glyphForm.getRawValue().x });
-  readonly #glyphY = toSignal(this.glyphForm.get('y')!.valueChanges, { initialValue: this.glyphForm.getRawValue().y });
-  readonly previewWindowSrcPx = computed(() => {
-    const geom = this.data.geometry;
-    const [offX, offY] = geom.glyph_template_origin;
-    return [(this.#glyphX() - offX) / geom.upscale, (this.#glyphY() - offY) / geom.upscale] as const;
-  });
+  readonly glyphX = toSignal(this.glyphForm.get('x')!.valueChanges, { initialValue: this.glyphForm.getRawValue().x });
+  readonly glyphY = toSignal(this.glyphForm.get('y')!.valueChanges, { initialValue: this.glyphForm.getRawValue().y });
 
   readonly glyphStrokes = computed(() => {
     const fv = this.#glyphFormValue();
@@ -53,7 +48,7 @@ export class ManualGlyphDialogComponent {
 
   readonly glyphResult = computed<Glyph>(() => {
     return {
-      origin: [this.#glyphX(), this.#glyphY()],
+      origin: [this.glyphX(), this.glyphY()],
       strokes: this.glyphStrokes(),
     };
   });

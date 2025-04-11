@@ -15,12 +15,8 @@
         <mat-label>Preview Y</mat-label><span matTextSuffix>px</span>
       </mat-form-field>
     </div>
-    <div class="geom-preview">
-      <canvas app-cropped-image-renderer-canvas [inputImage]="inputImage()" [windowSize]="glyphSizeSrcPx()"
-        [windowPos]="previewWindowSrcPx()" #previewDisplay="app-cropped-image-renderer-canvas"></canvas>
-      <app-trunic-glyph-image [geometry]="manualGlyphGeometry()" [strokesPacked]="4095"
-        [style.transform]="previewDisplay.imgTransform().scale(1/manualGlyphGeometry().upscale)" />
-    </div>
+    <app-trunic-geometry-preview [inputImage]="inputImage()" [geometry]="manualGlyphGeometry()" [glyphX]="previewX()"
+      [glyphY]="previewY()" [strokesPacked]="4095" />
     <div class="geom-fields">
       <mat-form-field>
         <input type="number" matInput formControlName="size" min="0" />
@@ -43,7 +39,7 @@
         <mat-label>stroke width</mat-label><span matTextSuffix>px</span>
       </mat-form-field>
       <mat-form-field>
-        <input type="number" matInput formControlName="h_nudge" step="0.1"/>
+        <input type="number" matInput formControlName="h_nudge" step="0.1" />
         <mat-label>horiz. nudge</mat-label><span matTextSuffix>px</span>
       </mat-form-field>
     </div>
